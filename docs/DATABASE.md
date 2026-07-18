@@ -6,6 +6,39 @@
 
 ---
 
+## Entity Base Class
+
+All 11 entities extend **`BaseAppEntity`** (abstract TypeORM class in `backend/src/entities/`), which provides:
+
+| Column | SQL type | Notes |
+|--------|----------|-------|
+| `created_at` | `timestamp` | Auto-set on insert |
+| `deleted_at` | `timestamp` nullable | Soft-delete (`@DeleteDateColumn`) |
+
+`SnakeNamingStrategy` from `typeorm-naming-strategies` is applied globally — all camelCase TS properties map to `snake_case` columns automatically.
+
+---
+
+## Phase 3 Tables — Authentication
+
+### users
+
+Stores registered user accounts. Added in Phase 3.
+
+| Column | SQL type | TS type | Notes |
+|--------|----------|---------|-------|
+| `id` | `serial` PK | `number` | Auto-increment |
+| `name` | `varchar(255)` NOT NULL | `string` | Display name |
+| `email` | `varchar(255)` UNIQUE NOT NULL | `string` | Login identifier |
+| `password_hash` | `varchar(255)` NOT NULL | `string` | bcrypt hash — never returned by the API |
+| `role` | `enum('admin','customer')` | `UserRole` | Default `customer`; included in JWT payload |
+| `created_at` | `timestamp` | `Date` | Via `BaseAppEntity` |
+| `deleted_at` | `timestamp` nullable | `Date \| null` | Soft-delete via `BaseAppEntity` |
+
+Entity: `backend/src/entities/user.entity.ts`
+
+---
+
 ## Phase 1 Tables — Product Catalogue
 
 These tables store the option sets that populate each wizard step.
@@ -20,7 +53,8 @@ These tables store the option sets that populate each wizard step.
 | `height` | `decimal(5,2)` | `number` | Inches |
 | `min_pages` | `integer` | `number` | Default 24 |
 | `max_pages` | `integer` | `number` | Default 840 |
-| `created_at` | `timestamp` | `Date` | Default `CURRENT_TIMESTAMP` |
+| `created_at` | `timestamp` | `Date` | Via `BaseAppEntity` |
+| `deleted_at` | `timestamp` nullable | `Date \| null` | Soft-delete via `BaseAppEntity` |
 
 Entity: `backend/src/entities/trim-size.entity.ts`
 
@@ -32,7 +66,8 @@ Entity: `backend/src/entities/trim-size.entity.ts`
 |--------|----------|---------|-------|
 | `id` | `serial` PK | `number` | |
 | `name` | `varchar(100)` UNIQUE | `string` | e.g. "Softcover", "Hardcover" |
-| `created_at` | `timestamp` | `Date` | |
+| `created_at` | `timestamp` | `Date` | Via `BaseAppEntity` |
+| `deleted_at` | `timestamp` nullable | `Date \| null` | Soft-delete via `BaseAppEntity` |
 
 Entity: `backend/src/entities/cover-style.entity.ts`
 
@@ -44,7 +79,8 @@ Entity: `backend/src/entities/cover-style.entity.ts`
 |--------|----------|---------|-------|
 | `id` | `serial` PK | `number` | |
 | `name` | `varchar(100)` UNIQUE | `string` | e.g. "Gloss", "Matte" |
-| `created_at` | `timestamp` | `Date` | |
+| `created_at` | `timestamp` | `Date` | Via `BaseAppEntity` |
+| `deleted_at` | `timestamp` nullable | `Date \| null` | Soft-delete via `BaseAppEntity` |
 
 Entity: `backend/src/entities/cover-finish.entity.ts`
 
@@ -56,7 +92,8 @@ Entity: `backend/src/entities/cover-finish.entity.ts`
 |--------|----------|---------|-------|
 | `id` | `serial` PK | `number` | |
 | `name` | `varchar(100)` UNIQUE | `string` | e.g. "Black & White", "Color" |
-| `created_at` | `timestamp` | `Date` | |
+| `created_at` | `timestamp` | `Date` | Via `BaseAppEntity` |
+| `deleted_at` | `timestamp` nullable | `Date \| null` | Soft-delete via `BaseAppEntity` |
 
 Entity: `backend/src/entities/print-type.entity.ts`
 
@@ -69,7 +106,8 @@ Entity: `backend/src/entities/print-type.entity.ts`
 | `id` | `serial` PK | `number` | |
 | `name` | `varchar(100)` UNIQUE | `string` | e.g. "60lb Natural" |
 | `weight` | `varchar(50)` nullable | `string` | e.g. "60lb" |
-| `created_at` | `timestamp` | `Date` | |
+| `created_at` | `timestamp` | `Date` | Via `BaseAppEntity` |
+| `deleted_at` | `timestamp` nullable | `Date \| null` | Soft-delete via `BaseAppEntity` |
 
 Entity: `backend/src/entities/paper-stock.entity.ts`
 
@@ -81,7 +119,8 @@ Entity: `backend/src/entities/paper-stock.entity.ts`
 |--------|----------|---------|-------|
 | `id` | `serial` PK | `number` | |
 | `name` | `varchar(100)` UNIQUE | `string` | e.g. "Perfect Bind", "Saddle Stitch" |
-| `created_at` | `timestamp` | `Date` | |
+| `created_at` | `timestamp` | `Date` | Via `BaseAppEntity` |
+| `deleted_at` | `timestamp` nullable | `Date \| null` | Soft-delete via `BaseAppEntity` |
 
 Entity: `backend/src/entities/binding-type.entity.ts`
 
@@ -91,7 +130,7 @@ Entity: `backend/src/entities/binding-type.entity.ts`
 
 ### quotes
 
-Stores completed quote configurations and their calculated prices. Extended in Phase 2 to include pricing columns.
+Stores completed quote configurations and their calculated prices. Extended in Phase 2 to include pricing columns. Extended in Phase 3 to associate quotes with a user.
 
 | Column | SQL type | TS type | Notes |
 |--------|----------|---------|-------|
@@ -101,7 +140,9 @@ Stores completed quote configurations and their calculated prices. Extended in P
 | `quantity` | `integer` | `number` | Added in Phase 2 |
 | `total_price` | `decimal(10,2)` | `number` | Added in Phase 2 |
 | `price_breakdown` | `jsonb` | `PriceBreakdown` | Added in Phase 2; full line-item breakdown |
-| `created_at` | `timestamp` | `Date` | Default `CURRENT_TIMESTAMP` |
+| `user_id` | `integer` nullable | `number \| null` | Added in Phase 3; FK to `users.id` — null for anonymous quotes saved before auth existed |
+| `created_at` | `timestamp` | `Date` | Via `BaseAppEntity` |
+| `deleted_at` | `timestamp` nullable | `Date \| null` | Soft-delete via `BaseAppEntity` |
 
 `PriceBreakdown` shape: `{ pageCost, coverCost, bindingCost, subtotal, tax, total }` (all `number`, USD).
 
@@ -123,7 +164,8 @@ Stores the per-page printing cost for each `printType` + `paperStock` combinatio
 | `print_type_id` | `integer` | `number` | FK reference (logical) to `print_types.id` |
 | `paper_stock_id` | `integer` | `number` | FK reference (logical) to `paper_stocks.id` |
 | `rate_per_page` | `decimal(8,4)` | `number` | Cost per page in USD |
-| `created_at` | `timestamp` | `Date` | |
+| `created_at` | `timestamp` | `Date` | Via `BaseAppEntity` |
+| `deleted_at` | `timestamp` nullable | `Date \| null` | Soft-delete via `BaseAppEntity` |
 
 Unique constraint: `(print_type_id, paper_stock_id)`.
 
@@ -151,15 +193,16 @@ Stores the flat cover cost for each `coverStyle` + `coverFinish` combination.
 | `id` | `serial` PK | `number` | |
 | `cover_style_id` | `integer` | `number` | FK reference (logical) to `cover_styles.id` |
 | `cover_finish_id` | `integer` | `number` | FK reference (logical) to `cover_finishes.id` |
-| `base_price` | `decimal(8,2)` | `number` | Flat cover cost in USD |
-| `created_at` | `timestamp` | `Date` | |
+| `rate_per_cover` | `decimal(8,2)` | `number` | Flat cover cost in USD |
+| `created_at` | `timestamp` | `Date` | Via `BaseAppEntity` |
+| `deleted_at` | `timestamp` nullable | `Date \| null` | Soft-delete via `BaseAppEntity` |
 
 Unique constraint: `(cover_style_id, cover_finish_id)`.
 
 Seeded values (9 rows):
 
-| cover_style_id | cover_finish_id | base_price |
-|----------------|-----------------|------------|
+| cover_style_id | cover_finish_id | rate_per_cover |
+|----------------|-----------------|----------------|
 | 1 (Softcover) | 1 (Gloss) | $3.50 |
 | 1 (Softcover) | 2 (Matte) | $4.00 |
 | 1 (Softcover) | 3 (Textured) | $4.75 |
@@ -176,21 +219,22 @@ Entity: `backend/src/entities/cover-rate.entity.ts`
 
 ### binding_rates
 
-Stores the binding surcharge for each binding type.
+Stores the binding cost for each binding type.
 
 | Column | SQL type | TS type | Notes |
 |--------|----------|---------|-------|
 | `id` | `serial` PK | `number` | |
 | `binding_type_id` | `integer` | `number` | FK reference (logical) to `binding_types.id` |
-| `surcharge` | `decimal(8,2)` | `number` | Binding surcharge in USD |
-| `created_at` | `timestamp` | `Date` | |
+| `rate_per_bind` | `decimal(8,2)` | `number` | Binding cost in USD |
+| `created_at` | `timestamp` | `Date` | Via `BaseAppEntity` |
+| `deleted_at` | `timestamp` nullable | `Date \| null` | Soft-delete via `BaseAppEntity` |
 
 Unique constraint: `(binding_type_id)`.
 
 Seeded values (3 rows):
 
-| binding_type_id | surcharge |
-|-----------------|-----------|
+| binding_type_id | rate_per_bind |
+|-----------------|---------------|
 | 1 (Perfect Bind) | $1.50 |
 | 2 (Saddle Stitch) | $0.75 |
 | 3 (Spiral) | $2.00 |

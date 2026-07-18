@@ -1,22 +1,22 @@
-import { CreateDateColumn, Column, Entity, PrimaryGeneratedColumn, Unique } from 'typeorm';
+import { Column, Entity, ManyToOne, PrimaryGeneratedColumn, Unique } from 'typeorm';
+import { BaseAppEntity } from './base-app.entity';
+import { PaperStock } from './paper-stock.entity';
+import { PrintType } from './print-type.entity';
 
 /** Stores the per-page printing cost for a given print type + paper stock combination */
 @Entity('page_rates')
-@Unique(['printTypeId', 'paperStockId'])
-export class PageRate {
+@Unique(['printType', 'paperStock'])
+export class PageRate extends BaseAppEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ name: 'print_type_id' })
-  printTypeId: number;
+  @ManyToOne(() => PrintType, { onDelete: 'RESTRICT' })
+  printType: PrintType;
 
-  @Column({ name: 'paper_stock_id' })
-  paperStockId: number;
+  @ManyToOne(() => PaperStock, { onDelete: 'RESTRICT' })
+  paperStock: PaperStock;
 
   /** Cost per page in USD */
-  @Column('decimal', { name: 'rate_per_page', precision: 8, scale: 4 })
+  @Column('decimal', { precision: 8, scale: 4 })
   ratePerPage: number;
-
-  @CreateDateColumn({ name: 'created_at' })
-  createdAt: Date;
 }

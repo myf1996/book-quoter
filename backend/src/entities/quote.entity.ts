@@ -1,4 +1,6 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { BaseAppEntity } from './base-app.entity';
+import { User } from './user.entity';
 
 export interface QuoteConfig {
   trimSizeId: number;
@@ -21,25 +23,25 @@ export interface PriceBreakdown {
 
 /** Stores a completed quote configuration with pricing */
 @Entity('quotes')
-export class Quote {
+export class Quote extends BaseAppEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
   @Column({ type: 'jsonb' })
   config: QuoteConfig;
 
-  @Column({ name: 'page_count' })
+  @Column()
   pageCount: number;
 
-  @Column({ name: 'quantity' })
+  @Column()
   quantity: number;
 
-  @Column('decimal', { name: 'total_price', precision: 10, scale: 2 })
+  @Column('decimal', { precision: 10, scale: 2 })
   totalPrice: number;
 
-  @Column({ name: 'price_breakdown', type: 'jsonb' })
+  @Column({ type: 'jsonb' })
   priceBreakdown: PriceBreakdown;
 
-  @Column({ name: 'created_at', type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
-  createdAt: Date;
+  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
+  user: User | null;
 }

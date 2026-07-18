@@ -1,8 +1,9 @@
 import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { BaseAppEntity } from './base-app.entity';
 
 /** Represents a book trim size option (e.g. Digest 5.5×8.5) */
 @Entity('trim_sizes')
-export class TrimSize {
+export class TrimSize extends BaseAppEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
@@ -15,12 +16,9 @@ export class TrimSize {
   @Column('decimal', { precision: 5, scale: 2 })
   height: number;
 
-  @Column({ name: 'min_pages', default: 24 })
+  @Column({ default: 24 })
   minPages: number;
 
-  @Column({ name: 'max_pages', default: 840 })
+  @Column({ default: 840 })
   maxPages: number;
-
-  @Column({ name: 'created_at', type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
-  createdAt: Date;
 }

@@ -42,3 +42,6 @@ coverage/
 
 # Railway
 .railway
+
+# GitNexus (auto-regenerated on each analyze run)
+AGENTS.md

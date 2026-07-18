@@ -1,19 +1,18 @@
-import { CreateDateColumn, Column, Entity, PrimaryGeneratedColumn, Unique } from 'typeorm';
+import { Column, Entity, ManyToOne, PrimaryGeneratedColumn, Unique } from 'typeorm';
+import { BaseAppEntity } from './base-app.entity';
+import { BindingType } from './binding-type.entity';
 
 /** Stores the binding surcharge for a given binding type */
 @Entity('binding_rates')
-@Unique(['bindingTypeId'])
-export class BindingRate {
+@Unique(['bindingType'])
+export class BindingRate extends BaseAppEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ name: 'binding_type_id' })
-  bindingTypeId: number;
+  @ManyToOne(() => BindingType, { onDelete: 'RESTRICT' })
+  bindingType: BindingType;
 
   /** Binding surcharge in USD */
-  @Column('decimal', { name: 'surcharge', precision: 8, scale: 2 })
+  @Column('decimal', { precision: 8, scale: 2 })
   surcharge: number;
-
-  @CreateDateColumn({ name: 'created_at' })
-  createdAt: Date;
 }

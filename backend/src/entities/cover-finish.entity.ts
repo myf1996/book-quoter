@@ -1,14 +1,12 @@
 import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { BaseAppEntity } from './base-app.entity';
 
 /** Represents a cover finish option (e.g. Gloss, Matte) */
 @Entity('cover_finishes')
-export class CoverFinish {
+export class CoverFinish extends BaseAppEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
   @Column({ length: 100, unique: true })
   name: string;
-
-  @Column({ name: 'created_at', type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
-  createdAt: Date;
 }

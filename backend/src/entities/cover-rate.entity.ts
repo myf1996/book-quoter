@@ -1,22 +1,22 @@
-import { CreateDateColumn, Column, Entity, PrimaryGeneratedColumn, Unique } from 'typeorm';
+import { Column, Entity, ManyToOne, PrimaryGeneratedColumn, Unique } from 'typeorm';
+import { BaseAppEntity } from './base-app.entity';
+import { CoverFinish } from './cover-finish.entity';
+import { CoverStyle } from './cover-style.entity';
 
 /** Stores the flat cover cost for a given cover style + cover finish combination */
 @Entity('cover_rates')
-@Unique(['coverStyleId', 'coverFinishId'])
-export class CoverRate {
+@Unique(['coverStyle', 'coverFinish'])
+export class CoverRate extends BaseAppEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ name: 'cover_style_id' })
-  coverStyleId: number;
+  @ManyToOne(() => CoverStyle, { onDelete: 'RESTRICT' })
+  coverStyle: CoverStyle;
 
-  @Column({ name: 'cover_finish_id' })
-  coverFinishId: number;
+  @ManyToOne(() => CoverFinish, { onDelete: 'RESTRICT' })
+  coverFinish: CoverFinish;
 
   /** Flat cover cost in USD */
-  @Column('decimal', { name: 'base_price', precision: 8, scale: 2 })
+  @Column('decimal', { precision: 8, scale: 2 })
   basePrice: number;
-
-  @CreateDateColumn({ name: 'created_at' })
-  createdAt: Date;
 }

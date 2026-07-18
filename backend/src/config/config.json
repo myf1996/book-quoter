@@ -2,7 +2,7 @@
   "phases": {
     "phase1CoreQuoter": true,
     "phase2PricingEngine": true,
-    "phase3Authentication": false,
+    "phase3Authentication": true,
     "phase4AdminPanel": false
   },
   "features": {
@@ -16,7 +16,7 @@
       "bindingTypes": { "enabled": true }
     },
     "pricing": { "enabled": true },
-    "auth": { "enabled": false },
+    "auth": { "enabled": true },
     "adminPanel": { "enabled": false }
   }
 }

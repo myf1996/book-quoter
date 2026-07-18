@@ -1,4 +1,5 @@
 import { DataSource } from 'typeorm';
+import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 import { BindingRate } from '../../entities/binding-rate.entity';
 import { BindingType } from '../../entities/binding-type.entity';
 import { CoverFinish } from '../../entities/cover-finish.entity';
@@ -9,6 +10,7 @@ import { PaperStock } from '../../entities/paper-stock.entity';
 import { PrintType } from '../../entities/print-type.entity';
 import { Quote } from '../../entities/quote.entity';
 import { TrimSize } from '../../entities/trim-size.entity';
+import { User } from '../../entities/user.entity';
 
 const dataSource = new DataSource({
   type: 'postgres',
@@ -17,46 +19,47 @@ const dataSource = new DataSource({
   username: process.env.DATABASE_USER ?? 'postgres',
   password: process.env.DATABASE_PASSWORD ?? '',
   database: process.env.DATABASE_NAME ?? 'quoter_db',
-  entities: [TrimSize, CoverStyle, CoverFinish, PrintType, PaperStock, BindingType, Quote, PageRate, CoverRate, BindingRate],
+  entities: [TrimSize, CoverStyle, CoverFinish, PrintType, PaperStock, BindingType, Quote, PageRate, CoverRate, BindingRate, User],
+  namingStrategy: new SnakeNamingStrategy(),
   synchronize: true,
 });
 
 async function seedPricing(): Promise<void> {
   await dataSource.initialize();
 
-  // page_rates: printTypeId × paperStockId
+  // page_rates: printType × paperStock
   // printTypeId 1 = Black & White, 2 = Color
   // paperStockId 1 = 60lb Natural, 2 = 70lb White, 3 = 80lb White
   await dataSource.getRepository(PageRate).save([
-    { printTypeId: 1, paperStockId: 1, ratePerPage: 0.0350 },
-    { printTypeId: 1, paperStockId: 2, ratePerPage: 0.0400 },
-    { printTypeId: 1, paperStockId: 3, ratePerPage: 0.0450 },
-    { printTypeId: 2, paperStockId: 1, ratePerPage: 0.0850 },
-    { printTypeId: 2, paperStockId: 2, ratePerPage: 0.0950 },
-    { printTypeId: 2, paperStockId: 3, ratePerPage: 0.1050 },
+    { printType: { id: 1 }, paperStock: { id: 1 }, ratePerPage: 0.0350 },
+    { printType: { id: 1 }, paperStock: { id: 2 }, ratePerPage: 0.0400 },
+    { printType: { id: 1 }, paperStock: { id: 3 }, ratePerPage: 0.0450 },
+    { printType: { id: 2 }, paperStock: { id: 1 }, ratePerPage: 0.0850 },
+    { printType: { id: 2 }, paperStock: { id: 2 }, ratePerPage: 0.0950 },
+    { printType: { id: 2 }, paperStock: { id: 3 }, ratePerPage: 0.1050 },
   ]);
 
-  // cover_rates: coverStyleId × coverFinishId
+  // cover_rates: coverStyle × coverFinish
   // coverStyleId 1 = Softcover, 2 = Hardcover, 3 = Dust Jacket
   // coverFinishId 1 = Gloss, 2 = Matte, 3 = Textured
   await dataSource.getRepository(CoverRate).save([
-    { coverStyleId: 1, coverFinishId: 1, basePrice: 3.50 },
-    { coverStyleId: 1, coverFinishId: 2, basePrice: 4.00 },
-    { coverStyleId: 1, coverFinishId: 3, basePrice: 4.75 },
-    { coverStyleId: 2, coverFinishId: 1, basePrice: 8.00 },
-    { coverStyleId: 2, coverFinishId: 2, basePrice: 8.50 },
-    { coverStyleId: 2, coverFinishId: 3, basePrice: 9.25 },
-    { coverStyleId: 3, coverFinishId: 1, basePrice: 10.00 },
-    { coverStyleId: 3, coverFinishId: 2, basePrice: 10.50 },
-    { coverStyleId: 3, coverFinishId: 3, basePrice: 11.25 },
+    { coverStyle: { id: 1 }, coverFinish: { id: 1 }, basePrice: 3.50 },
+    { coverStyle: { id: 1 }, coverFinish: { id: 2 }, basePrice: 4.00 },
+    { coverStyle: { id: 1 }, coverFinish: { id: 3 }, basePrice: 4.75 },
+    { coverStyle: { id: 2 }, coverFinish: { id: 1 }, basePrice: 8.00 },
+    { coverStyle: { id: 2 }, coverFinish: { id: 2 }, basePrice: 8.50 },
+    { coverStyle: { id: 2 }, coverFinish: { id: 3 }, basePrice: 9.25 },
+    { coverStyle: { id: 3 }, coverFinish: { id: 1 }, basePrice: 10.00 },
+    { coverStyle: { id: 3 }, coverFinish: { id: 2 }, basePrice: 10.50 },
+    { coverStyle: { id: 3 }, coverFinish: { id: 3 }, basePrice: 11.25 },
   ]);
 
-  // binding_rates: bindingTypeId
+  // binding_rates: bindingType
   // bindingTypeId 1 = Perfect Bind, 2 = Saddle Stitch, 3 = Spiral
   await dataSource.getRepository(BindingRate).save([
-    { bindingTypeId: 1, surcharge: 1.50 },
-    { bindingTypeId: 2, surcharge: 0.75 },
-    { bindingTypeId: 3, surcharge: 2.00 },
+    { bindingType: { id: 1 }, surcharge: 1.50 },
+    { bindingType: { id: 2 }, surcharge: 0.75 },
+    { bindingType: { id: 3 }, surcharge: 2.00 },
   ]);
 
   console.warn('Pricing seed complete.');

@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { typeOrmConfig } from './config/typeorm.config';
 import { AppConfigModule } from './modules/config/config.module';
+import { AuthModule } from './modules/auth/auth.module';
 import { ProductsModule } from './modules/products/products.module';
 import { QuoterModule } from './modules/quoter/quoter.module';
 
@@ -12,6 +13,7 @@ import { QuoterModule } from './modules/quoter/quoter.module';
     TypeOrmModule.forRootAsync({ useFactory: typeOrmConfig }),
     ProductsModule,
     AppConfigModule,
+    AuthModule,
     QuoterModule,
   ],
 })

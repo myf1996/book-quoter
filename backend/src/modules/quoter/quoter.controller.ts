@@ -1,7 +1,14 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post, Request, UseGuards } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { AuthenticatedUser } from '../auth/strategies/jwt.strategy';
 import { PriceBreakdown, Quote } from '../../entities/quote.entity';
 import { CalculateQuoteDto } from './dto/calculate-quote.dto';
 import { QuoterService } from './quoter.service';
+
+/** Typed request with the authenticated user attached by JwtAuthGuard */
+interface AuthRequest {
+  user: AuthenticatedUser;
+}
 
 /**
  * Exposes pricing and quote-saving endpoints for the quoter wizard.
@@ -22,10 +29,24 @@ export class QuoterController {
 
   /**
    * POST /api/quoter/quote
-   * Calculates price and saves the quote to the database. Returns the saved Quote.
+   * Calculates price and saves the quote to the database.
+   * Requires a valid JWT Bearer token.
+   * Returns the saved Quote with the authenticated user's ID attached.
    */
   @Post('quote')
-  saveQuote(@Body() dto: CalculateQuoteDto): Promise<Quote> {
-    return this.quoterService.saveQuote(dto);
+  @UseGuards(JwtAuthGuard)
+  saveQuote(@Body() dto: CalculateQuoteDto, @Request() req: AuthRequest): Promise<Quote> {
+    return this.quoterService.saveQuote(dto, req.user.id);
+  }
+
+  /**
+   * GET /api/quoter/quotes
+   * Returns all quotes saved by the authenticated user, newest first.
+   * Requires a valid JWT Bearer token.
+   */
+  @Get('quotes')
+  @UseGuards(JwtAuthGuard)
+  getUserQuotes(@Request() req: AuthRequest): Promise<Quote[]> {
+    return this.quoterService.getUserQuotes(req.user.id);
   }
 }

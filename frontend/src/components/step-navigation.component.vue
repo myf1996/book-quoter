@@ -1,6 +1,8 @@
 <script setup lang="ts">
 /**
- * StepNavigation — Previous / Next buttons for the wizard
+ * StepNavigation — Previous / Next / Finish buttons for the wizard.
+ * Emits `finish` on the last step instead of `next` so the wizard
+ * can intercept it for auth-gated quote saving.
  */
 defineProps<{
   currentStep: number
@@ -11,6 +13,7 @@ defineProps<{
 const emit = defineEmits<{
   next: []
   previous: []
+  finish: []
 }>()
 </script>
 
@@ -37,7 +40,7 @@ const emit = defineEmits<{
       v-else
       class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
       :disabled="!canAdvance"
-      @click="emit('next')"
+      @click="emit('finish')"
     >
       Finish
     </button>

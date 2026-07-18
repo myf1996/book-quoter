@@ -4,8 +4,8 @@ import { Repository } from 'typeorm';
 import { BindingRate } from '../../entities/binding-rate.entity';
 import { CoverRate } from '../../entities/cover-rate.entity';
 import { PageRate } from '../../entities/page-rate.entity';
-import { Quote } from '../../entities/quote.entity';
-import { PriceBreakdown } from '../../entities/quote.entity';
+import { PriceBreakdown, Quote } from '../../entities/quote.entity';
+import { User } from '../../entities/user.entity';
 import { CalculateQuoteDto } from './dto/calculate-quote.dto';
 
 /**
@@ -29,7 +29,10 @@ export class QuoterService {
    */
   async calculatePrice(dto: CalculateQuoteDto): Promise<PriceBreakdown> {
     const pageRate = await this.pageRateRepo.findOne({
-      where: { printTypeId: dto.printTypeId, paperStockId: dto.paperStockId },
+      where: {
+        printType: { id: dto.printTypeId },
+        paperStock: { id: dto.paperStockId },
+      },
     });
     if (!pageRate) {
       throw new NotFoundException(
@@ -38,7 +41,10 @@ export class QuoterService {
     }
 
     const coverRate = await this.coverRateRepo.findOne({
-      where: { coverStyleId: dto.coverStyleId, coverFinishId: dto.coverFinishId },
+      where: {
+        coverStyle: { id: dto.coverStyleId },
+        coverFinish: { id: dto.coverFinishId },
+      },
     });
     if (!coverRate) {
       throw new NotFoundException(
@@ -47,7 +53,7 @@ export class QuoterService {
     }
 
     const bindingRate = await this.bindingRateRepo.findOne({
-      where: { bindingTypeId: dto.bindingTypeId },
+      where: { bindingType: { id: dto.bindingTypeId } },
     });
     if (!bindingRate) {
       throw new NotFoundException(`No binding rate found for bindingTypeId=${dto.bindingTypeId}`);
@@ -66,9 +72,10 @@ export class QuoterService {
   /**
    * Calculates price and persists the quote to the database.
    * @param dto - Validated quote configuration from the wizard
+   * @param userId - ID of the authenticated user saving the quote
    * @returns The saved Quote entity with all fields populated
    */
-  async saveQuote(dto: CalculateQuoteDto): Promise<Quote> {
+  async saveQuote(dto: CalculateQuoteDto, userId: number): Promise<Quote> {
     const breakdown = await this.calculatePrice(dto);
 
     const quote = this.quoteRepo.create({
@@ -84,8 +91,21 @@ export class QuoterService {
       quantity: dto.quantity,
       totalPrice: breakdown.total,
       priceBreakdown: breakdown,
+      user: { id: userId } as User,
     });
 
     return this.quoteRepo.save(quote);
+  }
+
+  /**
+   * Returns all quotes saved by a specific user, newest first.
+   * @param userId - The authenticated user's ID
+   * @returns Array of Quote entities ordered by createdAt descending
+   */
+  async getUserQuotes(userId: number): Promise<Quote[]> {
+    return this.quoteRepo.find({
+      where: { user: { id: userId } },
+      order: { createdAt: 'DESC' },
+    });
   }
 }
