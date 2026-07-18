@@ -29,13 +29,14 @@
 | Layer | Tech |
 |-------|------|
 | Frontend | React 18 + TypeScript + Tailwind |
-| Backend | Node.js + Express + TypeScript |
+| Backend | Node.js + NestJS + TypeScript |
+| ORM | TypeORM (type-safe database queries) |
 | Database | PostgreSQL |
 | State | Context API |
 | UI | Tailwind CSS + React Hook Form |
 | Testing | Jest + React Testing Library |
 | Linting | ESLint + Prettier |
-| Deploy | Vercel + Railway + Supabase |
+| Deploy | Vercel + Railway (includes PostgreSQL) |
 
 ---
 
@@ -461,4 +462,3 @@ cd backend && npm run dev
 - Architecture questions → `/docs/ARCHITECTURE.md`
 - Code review checklist → `claude-dev-standards.skill.md`
 - Documentation → `claude-documentation.skill.md`
-

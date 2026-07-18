@@ -598,3 +598,12 @@ You now have:
 
 **All 9 files are in `/mnt/user-data/outputs/` ready to download and use!**
 
+Status: NEEDS PARTIAL UPDATE
+Reason: File describes tech stack
+Effort: 5 minutes
+
+Changes:
+  - Update tech stack section
+  - Express → NestJS
+  - Add TypeORM
+  - Everything else stays the same

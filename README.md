@@ -64,15 +64,36 @@ cd backend && npm run dev
 
 ## 🛠️ Tech Stack
 
+### Frontend
 | Layer | Technology |
 |-------|-----------|
-| Frontend | React 18 + TypeScript + Tailwind CSS |
-| Backend | Node.js + Express + TypeScript |
-| Database | PostgreSQL |
-| State | Context API |
+| Framework | React 18 + TypeScript |
+| Styling | Tailwind CSS |
+| Forms | React Hook Form |
+| State | Context API + Custom Hooks |
+| Routing | React Router v6 |
+| HTTP | Axios |
 | Testing | Jest + React Testing Library |
 | Linting | ESLint + Prettier |
-| Deployment | Vercel (Frontend) + Railway (Backend) |
+
+### Backend
+| Layer | Technology |
+|-------|-----------|
+| Framework | NestJS (Node.js) + TypeScript |
+| ORM | TypeORM (type-safe queries) |
+| Database | PostgreSQL 16 |
+| Validation | class-validator + class-transformer |
+| Testing | Jest |
+| Linting | ESLint + Prettier |
+
+### Infrastructure
+| Component | Technology |
+|-----------|-----------|
+| Frontend Deploy | Vercel |
+| Backend Deploy | Railway |
+| Database | Railway PostgreSQL |
+| Code Intelligence | GitNexus (knowledge graph MCP) |
+| CI/CD | GitHub Actions |
 
 ---
 
@@ -91,18 +112,20 @@ book-quoter/
 │   ├── package.json
 │   └── tsconfig.json
 │
-├── backend/                     # Node.js API
+├── backend/                     # NestJS API
 │   ├── src/
-│   │   ├── controllers/        # Route handlers
-│   │   ├── services/           # Business logic
-│   │   ├── routes/             # API routes
-│   │   ├── middleware/         # Middleware
-│   │   ├── models/             # Database models
-│   │   ├── types/              # TypeScript types
-│   │   └── config/             # Configuration
-│   ├── scripts/
-│   │   ├── migrate.js          # Database migrations
-│   │   └── seed.js             # Database seeding
+│   │   ├── modules/
+│   │   │   ├── products/       # Products module (trim sizes, cover styles, etc.)
+│   │   │   └── quoter/         # Quoter module (quote creation)
+│   │   ├── entities/           # TypeORM entities (DB models)
+│   │   ├── database/
+│   │   │   ├── migrations/     # TypeORM migrations
+│   │   │   └── seeds/          # Seed data
+│   │   ├── common/             # Shared filters, pipes, decorators
+│   │   ├── config/             # App + TypeORM config
+│   │   ├── app.module.ts       # Root module
+│   │   └── main.ts             # Entry point
+│   ├── test/
 │   ├── package.json
 │   └── tsconfig.json
 │
@@ -410,11 +433,11 @@ MIT License - See LICENSE file for details
 ## 🙏 Acknowledgments
 
 Built with:
-- React
-- Express.js
-- PostgreSQL
-- Vercel
-- Railway
+- React 18 + TypeScript
+- NestJS + TypeORM
+- PostgreSQL 16
+- Vercel + Railway
+- GitNexus (code intelligence)
 
 ---
 
