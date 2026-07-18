@@ -14,7 +14,7 @@ cp backend/.env.example backend/.env
 # Edit frontend/.env.local and backend/.env
 
 # 3. You're done! Run the app
-cd frontend && npm start
+cd frontend && npm run dev
 cd backend && npm run dev
 ```
 
@@ -22,18 +22,20 @@ cd backend && npm run dev
 
 ## 📋 Frontend Environment (.env.local)
 
+> **Vue/Vite:** All frontend env vars must be prefixed with `VITE_` and are accessed via `import.meta.env.VITE_*`.
+
 ### Development Setup
 
 **File:** `frontend/.env.local`
 
 ```env
 # API Configuration
-REACT_APP_API_URL=http://localhost:5000
-REACT_APP_ENVIRONMENT=development
+VITE_API_URL=http://localhost:5000
+VITE_ENVIRONMENT=development
 
-# Optional: Analytics (if using Sentry/Mixpanel)
-# REACT_APP_SENTRY_DSN=
-# REACT_APP_MIXPANEL_TOKEN=
+# Optional: Analytics
+# VITE_SENTRY_DSN=
+# VITE_MIXPANEL_TOKEN=
 ```
 
 ### Production Setup (Vercel)
@@ -41,22 +43,22 @@ REACT_APP_ENVIRONMENT=development
 **In Vercel Dashboard > Settings > Environment Variables**
 
 ```env
-REACT_APP_API_URL=https://api.quoter.railway.app
-REACT_APP_ENVIRONMENT=production
+VITE_API_URL=https://api.quoter.railway.app
+VITE_ENVIRONMENT=production
 ```
 
 ### Frontend .env.example Template
 
 ```env
 # Development API URL
-REACT_APP_API_URL=http://localhost:5000
+VITE_API_URL=http://localhost:5000
 
 # Environment
-REACT_APP_ENVIRONMENT=development
+VITE_ENVIRONMENT=development
 
 # Optional: Analytics
-# REACT_APP_SENTRY_DSN=https://...@sentry.io/...
-# REACT_APP_MIXPANEL_TOKEN=abcdef123456
+# VITE_SENTRY_DSN=https://...@sentry.io/...
+# VITE_MIXPANEL_TOKEN=abcdef123456
 ```
 
 ---
@@ -80,7 +82,7 @@ NODE_ENV=development
 PORT=5000
 
 # Frontend URL (for CORS)
-FRONTEND_URL=http://localhost:3000
+FRONTEND_URL=http://localhost:5173
 
 # Optional: Logging
 LOG_LEVEL=debug
@@ -124,7 +126,7 @@ NODE_ENV=development
 PORT=5000
 
 # CORS
-FRONTEND_URL=http://localhost:3000
+FRONTEND_URL=http://localhost:5173
 
 # Logging
 LOG_LEVEL=debug
@@ -250,9 +252,9 @@ ADMIN_JWT_SECRET=<another-32-char-random-string>
 ls frontend/.env.local
 
 # Check API URL is set
-grep REACT_APP_API_URL frontend/.env.local
+grep VITE_API_URL frontend/.env.local
 
-# Should output: REACT_APP_API_URL=http://localhost:5000
+# Should output: VITE_API_URL=http://localhost:5000
 ```
 
 ### Backend Environment
@@ -310,8 +312,8 @@ cd frontend
 vercel --prod
 
 # Add environment variables in Vercel dashboard
-REACT_APP_API_URL=https://api.quoter.railway.app
-REACT_APP_ENVIRONMENT=production
+VITE_API_URL=https://api.quoter.railway.app
+VITE_ENVIRONMENT=production
 ```
 
 ### Step 2: Setup Railway (Backend + Database)
@@ -360,11 +362,13 @@ railway run npm run test:db
 
 ### Frontend Variables
 
+> Accessed in Vue code as `import.meta.env.VITE_API_URL` etc.
+
 | Variable | Required | Example | Purpose |
 |----------|----------|---------|---------|
-| `REACT_APP_API_URL` | Yes | `http://localhost:5000` | Backend API URL |
-| `REACT_APP_ENVIRONMENT` | No | `development` | For feature flags |
-| `REACT_APP_SENTRY_DSN` | No | `https://...@sentry.io/...` | Error tracking |
+| `VITE_API_URL` | Yes | `http://localhost:5000` | Backend API URL |
+| `VITE_ENVIRONMENT` | No | `development` | For feature flags |
+| `VITE_SENTRY_DSN` | No | `https://...@sentry.io/...` | Error tracking |
 
 ### Backend Variables
 
@@ -375,7 +379,7 @@ railway run npm run test:db
 | `ADMIN_JWT_SECRET` | Yes | `def456...` | Admin JWT key |
 | `NODE_ENV` | Yes | `development` | Environment |
 | `PORT` | No | `5000` | Server port |
-| `FRONTEND_URL` | No | `http://localhost:3000` | For CORS |
+| `FRONTEND_URL` | No | `http://localhost:5173` | For CORS |
 | `LOG_LEVEL` | No | `debug` | Logging level |
 
 ---
@@ -404,7 +408,7 @@ psql postgres -l | grep quoter_db
 
 ```bash
 # 1. Check FRONTEND_URL in backend/.env
-FRONTEND_URL=http://localhost:3000  # or your deployed URL
+FRONTEND_URL=http://localhost:5173  # or your deployed URL
 
 # 2. Verify backend CORS config
 # In backend/app.ts, check cors() includes FRONTEND_URL
@@ -521,13 +525,13 @@ temp/
 
 ```bash
 # Terminal 1: Frontend
-cd frontend && npm start
+cd frontend && npm run dev
 
 # Terminal 2: Backend
 cd backend && npm run dev
 
 # Terminal 3: View logs (optional)
-# Monitor http://localhost:3000 and http://localhost:5000
+# Monitor http://localhost:5173 and http://localhost:5000
 ```
 
 ### Deploy to Production (2 commands)
@@ -543,7 +547,7 @@ cd backend && railway up
 ### Environment Files to Update
 
 ```
-frontend/.env.local  - Set REACT_APP_API_URL
+frontend/.env.local  - Set VITE_API_URL (accessed via import.meta.env.VITE_API_URL)
 backend/.env         - Set DATABASE_URL, JWT secrets
 ```
 
@@ -568,7 +572,7 @@ When all environment variables are configured:
 ✅ API endpoints are accessible  
 ✅ Ready for development  
 
-**Next:** Run `npm start` in frontend and `npm run dev` in backend!
+**Next:** Run `npm run dev` in frontend and `npm run dev` in backend!
 
 ---
 

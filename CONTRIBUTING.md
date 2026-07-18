@@ -6,7 +6,7 @@
 
 ## 🎯 Project Overview
 
-Book Printing Quoter is a 4-phase web application for generating dynamic book printing quotes with admin controls. Built with React, Node.js, TypeScript, and PostgreSQL.
+Book Printing Quoter is a 4-phase web application for generating dynamic book printing quotes with admin controls. Built with Vue 3, NestJS, TypeScript, and PostgreSQL.
 
 **Live URL:** (To be deployed)  
 **Git Repository:** (GitHub URL)  
@@ -18,18 +18,24 @@ Book Printing Quoter is a 4-phase web application for generating dynamic book pr
 
 ### Files
 ```
-✅ CORRECT:
+✅ CORRECT (Frontend - Vue):
+  quoter.page.vue
+  quoter-wizard.component.vue
+  trim-size.step.vue
+  use-quote-state.composable.ts
+  quote.store.ts
+
+✅ CORRECT (Backend - NestJS):
   price-calculator.service.ts
   quote.controller.ts
-  trim-size.step.tsx
-  use-auth.hook.ts
-  auth.middleware.ts
+  trim-size.entity.ts
+  products.module.ts
 
 ❌ WRONG - Don't use:
-  PriceCalculator.ts, priceCalculator.js, price_calculator.ts
+  PriceCalculator.ts, QuoterPage.vue, useQuoteState.ts, quote_state.ts
 ```
 
-**Pattern:** `kebab-case` + `.type` suffix
+**Pattern:** `kebab-case` + `.type` suffix (`.vue` for Vue SFCs, `.ts` for logic)
 
 ### Code (Inside Files)
 ```typescript
@@ -63,13 +69,17 @@ const MAX_QUANTITY = 10000;
 
 | Layer | Technology |
 |-------|-----------|
-| Frontend | React 18 + TypeScript |
-| Backend | Node.js + Express + TypeScript |
-| Database | PostgreSQL |
-| UI | Tailwind CSS |
-| Testing | Jest + React Testing Library |
+| Frontend | Vue 3 (Composition API) + TypeScript |
+| Build | Vite |
+| Backend | NestJS + TypeScript |
+| ORM | TypeORM |
+| Database | PostgreSQL 16 |
+| Styling | Tailwind CSS |
+| Forms | VeeValidate |
+| State | Pinia |
+| Routing | Vue Router 4 |
+| Testing | Vitest + Vue Test Utils (frontend) · Jest (backend) |
 | Linting | ESLint + Prettier |
-| State | Context API |
 
 ---
 
@@ -77,23 +87,26 @@ const MAX_QUANTITY = 10000;
 
 ```
 project/
-├── frontend/                    # React app
+├── frontend/                    # Vue 3 app (Vite)
 │   ├── src/
-│   │   ├── pages/              # *.page.tsx
-│   │   ├── components/         # *.component.tsx
-│   │   ├── hooks/              # use-*.hook.ts
-│   │   ├── context/            # *.context.ts
+│   │   ├── pages/              # *.page.vue
+│   │   ├── components/         # *.component.vue
+│   │   │   └── steps/          # *.step.vue
+│   │   ├── composables/        # use-*.composable.ts
+│   │   ├── stores/             # *.store.ts (Pinia)
+│   │   ├── router/             # index.ts
 │   │   └── utils/              # *.utils.ts
+│   ├── vite.config.ts
 │   └── package.json
 │
-├── backend/                     # Node.js API
+├── backend/                     # NestJS API
 │   ├── src/
-│   │   ├── controllers/        # *.controller.ts
-│   │   ├── services/           # *.service.ts
-│   │   ├── routes/             # *.routes.ts
-│   │   ├── middleware/         # *.middleware.ts
-│   │   ├── models/             # *.model.ts
-│   │   ├── types/              # *.types.ts
+│   │   ├── modules/            # Feature modules
+│   │   │   ├── products/       # *.controller.ts · *.service.ts · *.module.ts
+│   │   │   └── quoter/
+│   │   ├── entities/           # *.entity.ts (TypeORM)
+│   │   ├── database/           # migrations/ · seeds/
+│   │   ├── common/             # filters · pipes · decorators
 │   │   └── config/             # *.config.ts
 │   └── package.json
 │
@@ -143,7 +156,7 @@ PORT=5000
 
 **Frontend (.env.local):**
 ```
-REACT_APP_API_URL=http://localhost:5000
+VITE_API_URL=http://localhost:5000
 ```
 
 ### 4. Database Setup
@@ -158,8 +171,8 @@ npm run seed
 **Frontend (Terminal 1):**
 ```bash
 cd frontend
-npm start
-# Opens on http://localhost:3000
+npm run dev
+# Opens on http://localhost:5173
 ```
 
 **Backend (Terminal 2):**
@@ -202,12 +215,17 @@ function calculatePrice(config: any): any {
 ### 3. Create Tests
 Every feature needs tests:
 ```typescript
-// trim-size.step.test.tsx
+// trim-size.step.test.ts (Vitest + Vue Test Utils)
+import { describe, it, expect } from 'vitest'
+import { mount } from '@vue/test-utils'
+import TrimSizeStep from './trim-size.step.vue'
+
 describe('TrimSizeStep', () => {
-  it('should render trim size options', () => {
-    // Test code
-  });
-});
+  it('renders trim size options', () => {
+    const wrapper = mount(TrimSizeStep)
+    expect(wrapper.exists()).toBe(true)
+  })
+})
 ```
 
 ### 4. Document Changes
@@ -277,9 +295,14 @@ chore: dependency updates
 
 ### Run Tests
 ```bash
-npm test                    # Run all tests
-npm test -- --watch       # Watch mode
-npm test -- --coverage    # Coverage report
+# Frontend (Vitest)
+npm test              # Run all tests
+npm run test:watch    # Watch mode
+npm run test:coverage # Coverage report
+
+# Backend (Jest)
+npm test              # Run all tests
+npm run test:cov      # Coverage report
 ```
 
 ### Write Tests
@@ -371,9 +394,10 @@ export class PriceCalculatorService {
 
 ### Frontend
 ```bash
-# React DevTools Chrome Extension
-# Redux DevTools for state inspection
+# Vue DevTools Chrome/Firefox Extension (official)
+# Pinia DevTools (built into Vue DevTools)
 # Network tab in DevTools to inspect API calls
+# Vite HMR — changes reflect instantly without full reload
 ```
 
 ### Backend

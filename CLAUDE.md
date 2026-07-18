@@ -6,14 +6,15 @@ Full-stack web app for generating dynamic book printing quotes.
 
 ## Tech Stack
 
-### Frontend (port 3000)
-- React 18 + TypeScript
+### Frontend (port 5173 — Vite)
+- Vue 3 (Composition API + `<script setup>`) + TypeScript
+- Vite (build tool)
 - Tailwind CSS (styling)
-- React Hook Form (forms)
-- Context API + Custom Hooks (state)
-- React Router v6 (routing)
+- VeeValidate (forms)
+- Pinia (state — replaces Context API)
+- Vue Router 4 (routing)
 - Axios (HTTP)
-- Jest + React Testing Library (testing)
+- Vitest + Vue Test Utils (testing)
 
 ### Backend (port 5000)
 - NestJS + TypeScript (NOT Express)
@@ -51,7 +52,12 @@ GitNexus indexes the codebase into a knowledge graph and provides MCP tools so C
 ## Strict Naming Conventions
 | Context | Convention | Example |
 |---------|-----------|---------|
-| Files | kebab-case + .type.ext | `trim-size.entity.ts`, `products.service.ts` |
+| Context | Convention | Example |
+|---------|-----------|---------|
+| Vue SFCs | kebab-case + .type.vue | `trim-size.step.vue`, `quote-summary.component.vue` |
+| Composables | use-*.composable.ts | `use-quote-state.composable.ts` |
+| Pinia stores | *.store.ts | `quote.store.ts`, `config.store.ts` |
+| Backend files | kebab-case + .type.ts | `trim-size.entity.ts`, `products.service.ts` |
 | Variables/functions | camelCase | `quoteState`, `getAllTrimSizes` |
 | Classes/Interfaces/DTOs | PascalCase | `ProductsService`, `CreateQuoteDto` |
 | NestJS decorators | as-is | `@Get('trim-sizes')`, `@Injectable()` |
@@ -85,7 +91,7 @@ backend/src/
 
 ## Dev Workflow
 1. Run backend: `cd backend && npm run dev`
-2. Run frontend: `cd frontend && npm start`
+2. Run frontend: `cd frontend && npm run dev`
 3. After changes: `/lint-test` → `/docs-update` → `/dev-log`
 4. After new modules: `gitnexus analyze`
 5. Commit with descriptive message

@@ -28,13 +28,15 @@
 
 | Layer | Tech |
 |-------|------|
-| Frontend | React 18 + TypeScript + Tailwind |
-| Backend | Node.js + NestJS + TypeScript |
+| Frontend | Vue 3 (Composition API) + TypeScript + Vite |
+| Backend | NestJS + TypeScript |
 | ORM | TypeORM (type-safe database queries) |
-| Database | PostgreSQL |
-| State | Context API |
-| UI | Tailwind CSS + React Hook Form |
-| Testing | Jest + React Testing Library |
+| Database | PostgreSQL 16 |
+| State | Pinia |
+| UI | Tailwind CSS |
+| Forms | VeeValidate |
+| Routing | Vue Router 4 |
+| Testing | Vitest + Vue Test Utils (frontend) · Jest (backend) |
 | Linting | ESLint + Prettier |
 | Deploy | Vercel + Railway (includes PostgreSQL) |
 
@@ -42,13 +44,15 @@
 
 ## 📁 File Structure
 
-**Frontend:**
+**Frontend (Vue 3):**
 ```
-src/pages/[name].page.tsx
-src/components/[name].component.tsx
-src/hooks/use-[name].hook.ts
-src/context/[name].context.ts
+src/pages/[name].page.vue
+src/components/[name].component.vue
+src/components/steps/[name].step.vue
+src/composables/use-[name].composable.ts
+src/stores/[name].store.ts
 src/utils/[name].utils.ts
+src/router/index.ts
 ```
 
 **Backend:**
@@ -70,8 +74,8 @@ src/config/[name].config.ts
 ```
 ✅ price-calculator.service.ts
 ✅ quote.controller.ts
-✅ trim-size.step.tsx
-✅ use-auth.hook.ts
+✅ trim-size.step.vue
+✅ use-quote-state.composable.ts
 
 ❌ PriceCalculator.ts, priceCalculator.js
 ```
@@ -168,7 +172,7 @@ npm run seed
 
 # 5. Run
 # Terminal 1
-cd frontend && npm start
+cd frontend && npm run dev
 
 # Terminal 2
 cd backend && npm run dev
@@ -304,11 +308,11 @@ Toggle features by changing boolean flags. Frontend automatically shows/hides UI
 - ✅ Self-documenting code
 - ✅ Easier refactoring
 
-**Why Context API not Redux?**
-- ✅ MVP doesn't need Redux complexity
-- ✅ Built-in to React
-- ✅ Less boilerplate
-- ✅ Can switch to Redux in Phase 3
+**Why Pinia not Vuex?**
+- ✅ Official Vue 3 state management (Vuex is legacy)
+- ✅ TypeScript-first, no boilerplate mutations
+- ✅ Vue DevTools integration built-in
+- ✅ Composable-style API, easy to test
 
 **Why kebab-case endpoints?**
 - ✅ Industry standard
@@ -394,7 +398,7 @@ Toggle features by changing boolean flags. Frontend automatically shows/hides UI
 
 | Role | Responsibility |
 |------|---|
-| Frontend Dev | React components, UI/UX |
+| Frontend Dev | Vue 3 components, UI/UX |
 | Backend Dev | APIs, database, services |
 | DevOps | Deployment, monitoring |
 | QA | Testing, documentation |
@@ -440,7 +444,7 @@ Follow DEPLOYMENT.md
 
 ### Step 4: Start Coding
 ```bash
-cd frontend && npm start
+cd frontend && npm run dev
 cd backend && npm run dev
 ```
 

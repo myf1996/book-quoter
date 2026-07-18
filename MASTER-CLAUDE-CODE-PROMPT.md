@@ -1,5 +1,5 @@
-# 🚀 MASTER CLAUDE CODE PROMPT (NestJS + TypeORM VERSION)
-## Book Printing Quoter - Phase 1 Complete Build with NestJS
+# 🚀 MASTER CLAUDE CODE PROMPT (Vue 3 + NestJS + TypeORM VERSION)
+## Book Printing Quoter - Phase 1 Complete Build with Vue 3 + NestJS
 
 Copy-paste this ENTIRE prompt into Claude Code and run it.
 
@@ -8,15 +8,16 @@ Copy-paste this ENTIRE prompt into Claude Code and run it.
 ## PROMPT FOR CLAUDE CODE
 
 ```
-You are building the Book Printing Quoter application using NestJS + TypeORM.
+You are building the Book Printing Quoter application using Vue 3 + NestJS + TypeORM.
 Follow EVERY rule below exactly.
 
 ═══════════════════════════════════════════════════════════════════════════════
 
 ## 📋 PROJECT OVERVIEW
 - Name: Book Printing Quoter
-- Type: Full-stack web application (React + NestJS + PostgreSQL)
+- Type: Full-stack web application (Vue 3 + NestJS + PostgreSQL)
 - Current Phase: Phase 1 (Core Quoter - Weeks 1-2)
+- Frontend Framework: Vue 3 (Composition API + <script setup>) + Vite
 - Backend Framework: NestJS + TypeORM (NOT Express)
 - Database ORM: TypeORM (type-safe queries)
 - Timeline: 8 weeks (4 phases)
@@ -79,10 +80,21 @@ BACKEND FILES (NestJS):
   - TrimSizeEntity.ts
   - quote_entity.ts
 
-FRONTEND FILES (Same as before):
-✅ quoter.page.tsx
-✅ quote-summary.component.tsx
-✅ use-quote-state.hook.ts
+FRONTEND FILES (Vue 3):
+✅ quoter.page.vue
+✅ quoter-wizard.component.vue
+✅ trim-size.step.vue
+✅ quote-summary.component.vue
+✅ step-navigation.component.vue
+✅ progress-bar.component.vue
+✅ use-quote-state.composable.ts
+✅ quote.store.ts
+✅ config.store.ts
+
+❌ WRONG:
+  QuoterPage.vue, QuoterWizard.vue (PascalCase filename)
+  useQuoteState.ts (camelCase filename)
+  useQuoteState.hook.ts (React naming — use .composable.ts in Vue)
 
 ### CODE NAMING: camelCase for variables/functions
 
@@ -147,27 +159,35 @@ project/
 ├── frontend/
 │   ├── src/
 │   │   ├── pages/
-│   │   │   └── quoter.page.tsx
+│   │   │   └── quoter.page.vue              # Main page
 │   │   ├── components/
-│   │   │   ├── quoter-wizard.component.tsx
+│   │   │   ├── quoter-wizard.component.vue  # Step container
 │   │   │   ├── steps/
-│   │   │   │   ├── trim-size.step.tsx
-│   │   │   │   ├── cover-style.step.tsx
-│   │   │   │   ├── cover-finish.step.tsx
-│   │   │   │   ├── print-type.step.tsx
-│   │   │   │   ├── paper-stock.step.tsx
-│   │   │   │   └── binding.step.tsx
-│   │   │   ├── quote-summary.component.tsx
-│   │   │   ├── step-navigation.component.tsx
-│   │   │   └── progress-bar.component.tsx
-│   │   ├── hooks/
-│   │   │   └── use-quote-state.hook.ts
-│   │   ├── context/
-│   │   │   ├── config.context.ts
-│   │   │   └── quote.context.ts
-│   │   └── utils/
-│   │       └── helpers.utils.ts
-│   └── package.json
+│   │   │   │   ├── trim-size.step.vue       # Step 1
+│   │   │   │   ├── cover-style.step.vue     # Step 2
+│   │   │   │   ├── cover-finish.step.vue    # Step 3
+│   │   │   │   ├── print-type.step.vue      # Step 4
+│   │   │   │   ├── paper-stock.step.vue     # Step 5
+│   │   │   │   └── binding.step.vue         # Step 6
+│   │   │   ├── quote-summary.component.vue
+│   │   │   ├── step-navigation.component.vue
+│   │   │   └── progress-bar.component.vue
+│   │   ├── composables/
+│   │   │   └── use-quote-state.composable.ts
+│   │   ├── stores/                          # Pinia stores
+│   │   │   ├── config.store.ts
+│   │   │   └── quote.store.ts
+│   │   ├── router/
+│   │   │   └── index.ts
+│   │   ├── utils/
+│   │   │   └── helpers.utils.ts
+│   │   ├── App.vue
+│   │   └── main.ts
+│   ├── public/
+│   ├── package.json
+│   ├── vite.config.ts
+│   ├── tsconfig.json
+│   └── .env.example
 │
 ├── backend/
 │   ├── src/
@@ -513,9 +533,43 @@ export class ProductsService {
 
 ═══════════════════════════════════════════════════════════════════════════════
 
-## 📦 NESTJS SETUP & DEPENDENCIES
+## 📦 SETUP & DEPENDENCIES
 
-### Package.json Scripts
+### Frontend (Vue 3 + Vite) — package.json scripts
+
+```json
+{
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest",
+    "test:watch": "vitest --watch",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint src/**/*.{ts,vue}",
+    "lint:fix": "eslint src/**/*.{ts,vue} --fix",
+    "type-check": "vue-tsc --noEmit",
+    "format": "prettier --write \"src/**/*.{ts,vue}\""
+  }
+}
+```
+
+### Frontend Required Dependencies
+
+```bash
+npm install vue@3 vue-router@4 pinia
+npm install axios vee-validate @vee-validate/rules
+npm install @headlessui/vue
+
+# Dev dependencies
+npm install -D vite @vitejs/plugin-vue vue-tsc typescript
+npm install -D tailwindcss postcss autoprefixer
+npm install -D vitest @vue/test-utils @vitest/coverage-v8
+npm install -D eslint prettier @vue/eslint-config-typescript
+npm install -D @typescript-eslint/eslint-plugin @typescript-eslint/parser
+```
+
+### Backend (NestJS) — package.json scripts
 
 ```json
 {
@@ -534,14 +588,14 @@ export class ProductsService {
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
-    "lint": "eslint src/**/*.{ts,tsx}",
-    "lint:fix": "eslint src/**/*.{ts,tsx} --fix",
-    "format": "prettier --write \"src/**/*.{ts,tsx}\""
+    "lint": "eslint src/**/*.ts",
+    "lint:fix": "eslint src/**/*.ts --fix",
+    "format": "prettier --write \"src/**/*.ts\""
   }
 }
 ```
 
-### Required Dependencies
+### Backend Required Dependencies
 
 ```bash
 npm install @nestjs/common @nestjs/core @nestjs/platform-express
@@ -599,27 +653,80 @@ Create backend/src/config/config.json:
 
 ═══════════════════════════════════════════════════════════════════════════════
 
-## 🎨 FRONTEND COMPONENT ARCHITECTURE (Same as before)
+## 🎨 FRONTEND COMPONENT ARCHITECTURE (Vue 3)
 
-QuoterPage (main page)
-  ├── QuoterWizard (step container)
-  │   ├── ProgressBar
-  │   ├── Step 1: TrimSizeStep
-  │   ├── Step 2: CoverStyleStep
-  │   ├── Step 3: CoverFinishStep
-  │   ├── Step 4: PrintTypeStep
-  │   ├── Step 5: PaperStockStep
-  │   ├── Step 6: BindingStep
-  │   ├── StepNavigation (Previous/Next buttons)
-  │   │
-  │   └── QuoteSummary (right panel, always visible)
-  │       ├── Trim Size: {selected}
-  │       ├── Cover Style: {selected}
-  │       ├── Cover Finish: {selected}
-  │       ├── Print Type: {selected}
-  │       ├── Paper Stock: {selected}
-  │       ├── Binding: {selected}
-  │       └── (No pricing in Phase 1)
+quoter.page.vue (main page)
+  └── quoter-wizard.component.vue (step container)
+      ├── progress-bar.component.vue
+      ├── [current step — v-if per step number]:
+      │   ├── trim-size.step.vue       (step 1)
+      │   ├── cover-style.step.vue     (step 2)
+      │   ├── cover-finish.step.vue    (step 3)
+      │   ├── print-type.step.vue      (step 4)
+      │   ├── paper-stock.step.vue     (step 5)
+      │   └── binding.step.vue         (step 6)
+      ├── step-navigation.component.vue (Previous/Next)
+      └── quote-summary.component.vue  (right panel, always visible)
+          ├── Trim Size: {{ quoteStore.selectedTrimSize }}
+          ├── Cover Style: {{ quoteStore.selectedCoverStyle }}
+          ├── Cover Finish: {{ quoteStore.selectedCoverFinish }}
+          ├── Print Type: {{ quoteStore.selectedPrintType }}
+          ├── Paper Stock: {{ quoteStore.selectedPaperStock }}
+          ├── Binding: {{ quoteStore.selectedBinding }}
+          └── (No pricing in Phase 1)
+
+### Pinia Store Structure (quote.store.ts)
+
+```typescript
+export const useQuoteStore = defineStore('quote', () => {
+  const currentStep = ref(1)
+  const quoteState = reactive<QuoteState>({
+    trimSizeId: null,
+    coverStyleId: null,
+    coverFinishId: null,
+    printTypeId: null,
+    paperStockId: null,
+    bindingTypeId: null,
+  })
+
+  function updateQuoteState(updates: Partial<QuoteState>): void { ... }
+  function goToNextStep(): void { ... }
+  function goToPreviousStep(): void { ... }
+  function isCurrentStepComplete(): boolean { ... }
+
+  return { currentStep, quoteState, updateQuoteState, goToNextStep, goToPreviousStep, isCurrentStepComplete }
+})
+```
+
+### Config Store (config.store.ts)
+
+```typescript
+export const useConfigStore = defineStore('config', () => {
+  const globalConfig = ref<GlobalConfig | null>(null)
+
+  async function fetchConfig(): Promise<void> {
+    globalConfig.value = await api.get('/api/config')
+  }
+
+  return { globalConfig, fetchConfig }
+})
+```
+
+### Vue SFC Pattern (all components use this)
+
+```vue
+<script setup lang="ts">
+// Props, emits, store usage, composables here
+</script>
+
+<template>
+  <!-- Template here -->
+</template>
+
+<style scoped>
+/* Scoped styles if not using Tailwind exclusively */
+</style>
+```
 
 ═══════════════════════════════════════════════════════════════════════════════
 
@@ -673,7 +780,7 @@ Before generating code, validate:
    └─ Create config endpoint
 
 6. Frontend Integration
-   ├─ Setup React components
+   ├─ Setup Vue components
    ├─ Connect to API
    └─ Test all endpoints
 
@@ -704,7 +811,7 @@ After running this prompt, you should have:
 ✅ TypeScript compilation without errors
 ✅ ESLint passing all checks
 ✅ Prettier formatted code
-✅ React frontend ready to connect
+✅ Vue 3 frontend ready to connect
 ✅ Ready for deployment to Vercel + Railway
 
 ═══════════════════════════════════════════════════════════════════════════════
@@ -733,14 +840,17 @@ SKILL 2: Documentation Generation
 
 ═══════════════════════════════════════════════════════════════════════════════
 
-## 💻 TECH STACK CONFIRMED (NestJS VERSION)
+## 💻 TECH STACK CONFIRMED (Vue 3 + NestJS VERSION)
 
-Frontend: React 18 + TypeScript + Tailwind CSS
-Backend: Node.js + NestJS + TypeScript + TypeORM
-Database: PostgreSQL
-State: Context API + Custom Hooks
-Testing: Jest + React Testing Library
-Linting: ESLint + Prettier
+Frontend: Vue 3 (Composition API + <script setup>) + TypeScript + Vite + Tailwind CSS
+State: Pinia (stores)
+Forms: VeeValidate
+Routing: Vue Router 4
+Testing (Frontend): Vitest + Vue Test Utils
+Backend: NestJS + TypeScript + TypeORM
+Database: PostgreSQL 16
+Testing (Backend): Jest
+Linting: ESLint + Prettier (both)
 Deployment: Vercel (Frontend) + Railway (Backend + Database)
 Cost: $0/month (free tier)
 
@@ -748,7 +858,7 @@ Cost: $0/month (free tier)
 
 ## 🎯 FINAL INSTRUCTION
 
-Build Phase 1 of the Book Printing Quoter using NestJS + TypeORM following 
+Build Phase 1 of the Book Printing Quoter using Vue 3 + NestJS + TypeORM following
 EVERY single specification above.
 
 Use these naming conventions EXACTLY as specified (no exceptions):

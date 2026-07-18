@@ -1,6 +1,6 @@
 # 📖 Book Printing Quoter
 
-A full-stack web application for generating dynamic book printing quotes with admin controls. Built with React, Node.js, TypeScript, and PostgreSQL.
+A full-stack web application for generating dynamic book printing quotes with admin controls. Built with Vue 3, NestJS, TypeScript, and PostgreSQL.
 
 **Live Demo:** https://quoter.vercel.app  
 **API:** https://api.quoter.railway.app  
@@ -25,13 +25,13 @@ cd ../backend && npm install
 
 # 4. Run locally
 # Terminal 1: Frontend
-cd frontend && npm start
+cd frontend && npm run dev
 
 # Terminal 2: Backend
 cd backend && npm run dev
 
 # 5. Open browser
-# Frontend: http://localhost:3000
+# Frontend: http://localhost:5173
 # API: http://localhost:5000/api/config
 ```
 
@@ -67,13 +67,14 @@ cd backend && npm run dev
 ### Frontend
 | Layer | Technology |
 |-------|-----------|
-| Framework | React 18 + TypeScript |
+| Framework | Vue 3 (Composition API + `<script setup>`) + TypeScript |
+| Build | Vite |
 | Styling | Tailwind CSS |
-| Forms | React Hook Form |
-| State | Context API + Custom Hooks |
-| Routing | React Router v6 |
+| Forms | VeeValidate |
+| State | Pinia |
+| Routing | Vue Router 4 |
 | HTTP | Axios |
-| Testing | Jest + React Testing Library |
+| Testing | Vitest + Vue Test Utils |
 | Linting | ESLint + Prettier |
 
 ### Backend
@@ -101,15 +102,17 @@ cd backend && npm run dev
 
 ```
 book-quoter/
-├── frontend/                    # React application
+├── frontend/                    # Vue 3 application (Vite)
 │   ├── src/
-│   │   ├── pages/              # Page components
-│   │   ├── components/         # Reusable components
-│   │   ├── hooks/              # Custom hooks
-│   │   ├── context/            # Context API
-│   │   └── utils/              # Utilities
+│   │   ├── pages/              # *.page.vue
+│   │   ├── components/         # *.component.vue + steps/*.step.vue
+│   │   ├── composables/        # use-*.composable.ts
+│   │   ├── stores/             # Pinia stores (*.store.ts)
+│   │   ├── router/             # Vue Router config
+│   │   └── utils/              # *.utils.ts
 │   ├── public/
 │   ├── package.json
+│   ├── vite.config.ts
 │   └── tsconfig.json
 │
 ├── backend/                     # NestJS API
@@ -215,8 +218,8 @@ npm run seed
 ### Run Frontend
 ```bash
 cd frontend
-npm start
-# Opens http://localhost:3000
+npm run dev
+# Opens http://localhost:5173
 ```
 
 ### Run Backend
@@ -256,9 +259,11 @@ npm run format
 
 ### Files: kebab-case + type
 ```
-✅ quoter.page.tsx
-✅ quote-summary.component.tsx
-✅ use-auth.hook.ts
+✅ quoter.page.vue
+✅ quote-summary.component.vue
+✅ trim-size.step.vue
+✅ use-quote-state.composable.ts
+✅ quote.store.ts
 ✅ price-calculator.service.ts
 ✅ quote.controller.ts
 ```
@@ -309,10 +314,10 @@ See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed instructions.
 ### Frontend not connecting to backend?
 ```bash
 # Check .env.local
-REACT_APP_API_URL=http://localhost:5000
+VITE_API_URL=http://localhost:5000
 
 # Restart frontend
-npm start
+npm run dev
 ```
 
 ### Database connection error?
@@ -392,7 +397,7 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md#troubleshooting-tips) for more troublesh
 - 🔜 Order management
 
 **Q1 2027:**
-- 🔜 Mobile app (React Native)
+- 🔜 Mobile app (Capacitor/PWA)
 - 🔜 Multi-language support
 - 🔜 Fulfillment integration
 
@@ -433,7 +438,7 @@ MIT License - See LICENSE file for details
 ## 🙏 Acknowledgments
 
 Built with:
-- React 18 + TypeScript
+- Vue 3 + TypeScript + Vite
 - NestJS + TypeORM
 - PostgreSQL 16
 - Vercel + Railway

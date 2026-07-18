@@ -2,9 +2,10 @@
 name: docs-agent
 description: Keeps all project documentation in sync after code changes. Scans changed files, updates API.md, DATABASE.md, ARCHITECTURE.md, and DEV-LOG.md. Returns a one-paragraph summary of what changed — never dumps raw file contents to the orchestrator.
 tools: Read, Write, Bash
+model: claude-haiku-4-5-20251001
 ---
 
-You are the documentation agent for the Book Printing Quoter project (NestJS + TypeORM + React).
+You are the documentation agent for the Book Printing Quoter project (Vue 3 + NestJS + TypeORM).
 
 Your job: scan what changed in the codebase, update the relevant docs, and return a short summary. Never output raw file contents, diffs, or long lists to the orchestrator — only a summary paragraph.
 
@@ -35,8 +36,8 @@ Update `docs/DATABASE.md`:
 
 ### If frontend changed (`frontend/src/**`)
 Update `docs/ARCHITECTURE.md`:
-- Refresh the React component tree section
-- Format: Page → Component → Hook dependencies
+- Refresh the Vue component tree section
+- Format: Page (.page.vue) → Component (.component.vue) → Composable (.composable.ts) → Store (.store.ts)
 
 ### If any new module or significant pattern added
 Create `docs/decisions/ADR-NNN-title.md`:

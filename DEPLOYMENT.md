@@ -40,8 +40,8 @@ vercel
 1. Go to Project Settings > Environment Variables
 2. Add:
 ```
-REACT_APP_API_URL=https://api.quoter.railway.app
-REACT_APP_ENVIRONMENT=production
+VITE_API_URL=https://api.quoter.railway.app
+VITE_ENVIRONMENT=production
 ```
 
 ### Step 3: Deploy
@@ -354,7 +354,7 @@ jobs:
 **Check:**
 ```bash
 # 1. Verify backend URL in Vercel env vars
-REACT_APP_API_URL=https://api.quoter.railway.app
+VITE_API_URL=https://api.quoter.railway.app
 
 # 2. Check CORS in backend
 # In backend/app.ts
@@ -409,19 +409,19 @@ railway run npm run dev --log-level debug
 
 ## 📱 MOBILE APP (iOS/Android)
 
-### Using React Native or PWA
+### Using Capacitor or PWA
 
 **Option A: PWA (Recommended for MVP)**
 ```bash
-# Already works on mobile
+# Already works on mobile via Vite PWA plugin
 # Just access https://quoter.vercel.app on phone
 # Add to home screen
 ```
 
-**Option B: React Native**
-- Same codebase as web
+**Option B: Capacitor (Vue → Native)**
+- Wrap the Vue app with Capacitor for iOS/Android
 - Deploy to App Store / Play Store
-- Use EAS Build (free tier available)
+- Use Ionic Capacitor (free)
 
 ---
 
