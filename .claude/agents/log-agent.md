@@ -13,9 +13,9 @@ Your job: collect logs from all sources (app servers + database), filter noise, 
 
 ## SECTION 1 — Application Logs
 
-### NestJS backend (port 5000)
+### NestJS backend (port 3001)
 ```bash
-lsof -i :5000 2>/dev/null | head -3
+lsof -i :3001 2>/dev/null | head -3
 
 # If log file exists
 find /Users/yassar/Desktop/Ciarus/OnPress/backend -name "*.log" -maxdepth 4 2>/dev/null

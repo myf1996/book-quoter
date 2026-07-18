@@ -16,7 +16,7 @@ Full-stack web app for generating dynamic book printing quotes.
 - Axios (HTTP)
 - Vitest + Vue Test Utils (testing)
 
-### Backend (port 5000)
+### Backend (port 3001)
 - NestJS + TypeScript (NOT Express)
 - TypeORM (ORM — type-safe queries, no raw SQL)
 - PostgreSQL 16
@@ -42,6 +42,19 @@ Full-stack web app for generating dynamic book printing quotes.
 | `/lint-test` | Run ESLint + TypeScript + Jest pipeline, report failures |
 | `/lint-test fix` | Auto-fix lint, then re-run pipeline |
 | `/dev-log` | Append structured session log to `docs/DEV-LOG.md` |
+| `/implement <task>` | Delegate a feature/fix to the implementation agent |
+
+## Subagents (in `.claude/agents/`)
+These agents are spawned by the orchestrator to keep the main context clean.
+
+| Agent file | Model | Responsibility |
+|-----------|-------|----------------|
+| `docs-agent.md` | claude-haiku-4-5-20251001 | Scans git-changed files, updates API.md / DATABASE.md / ARCHITECTURE.md / DEV-LOG.md |
+| `lint-agent.md` | claude-haiku-4-5-20251001 | Runs ESLint + TypeScript + Vitest (frontend) + Jest (backend) + build. Returns pass/fail table only |
+| `log-agent.md` | claude-haiku-4-5-20251001 | Checks NestJS (port 3001) + Vite (port 5173) logs AND PostgreSQL via psql CLI. Returns structured digest |
+| `implementation-agent.md` | claude-sonnet-4-6 | Implements features following all Vue 3 + NestJS conventions. Reads files before writing. Runs type-check after |
+
+**Rule:** Never commit or push without explicit user approval.
 
 ## GitNexus (Code Intelligence MCP)
 GitNexus indexes the codebase into a knowledge graph and provides MCP tools so Claude Code understands every dependency, call chain, and module relationship.

@@ -1,0 +1,22 @@
+{
+  "phases": {
+    "phase1CoreQuoter": true,
+    "phase2PricingEngine": false,
+    "phase3Authentication": false,
+    "phase4AdminPanel": false
+  },
+  "features": {
+    "quoter": {
+      "enabled": true,
+      "trimSizes": { "enabled": true },
+      "coverStyles": { "enabled": true },
+      "coverFinishes": { "enabled": true },
+      "printTypes": { "enabled": true },
+      "paperStocks": { "enabled": true },
+      "bindingTypes": { "enabled": true }
+    },
+    "pricing": { "enabled": false },
+    "auth": { "enabled": false },
+    "adminPanel": { "enabled": false }
+  }
+}
