@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { typeOrmConfig } from './config/typeorm.config';
 import { AppConfigModule } from './modules/config/config.module';
 import { ProductsModule } from './modules/products/products.module';
+import { QuoterModule } from './modules/quoter/quoter.module';
 
 @Module({
   imports: [
@@ -11,6 +12,7 @@ import { ProductsModule } from './modules/products/products.module';
     TypeOrmModule.forRootAsync({ useFactory: typeOrmConfig }),
     ProductsModule,
     AppConfigModule,
+    QuoterModule,
   ],
 })
 export class AppModule {}

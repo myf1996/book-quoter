@@ -6,6 +6,9 @@ import { PrintType } from '../entities/print-type.entity';
 import { PaperStock } from '../entities/paper-stock.entity';
 import { BindingType } from '../entities/binding-type.entity';
 import { Quote } from '../entities/quote.entity';
+import { PageRate } from '../entities/page-rate.entity';
+import { CoverRate } from '../entities/cover-rate.entity';
+import { BindingRate } from '../entities/binding-rate.entity';
 
 /** TypeORM connection config — reads from environment variables */
 export const typeOrmConfig = (): TypeOrmModuleOptions => ({
@@ -15,7 +18,7 @@ export const typeOrmConfig = (): TypeOrmModuleOptions => ({
   username: process.env.DATABASE_USER ?? 'postgres',
   password: process.env.DATABASE_PASSWORD ?? '',
   database: process.env.DATABASE_NAME ?? 'quoter_db',
-  entities: [TrimSize, CoverStyle, CoverFinish, PrintType, PaperStock, BindingType, Quote],
+  entities: [TrimSize, CoverStyle, CoverFinish, PrintType, PaperStock, BindingType, Quote, PageRate, CoverRate, BindingRate],
   synchronize: process.env.NODE_ENV !== 'production',
   logging: process.env.NODE_ENV === 'development',
 });

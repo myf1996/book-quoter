@@ -1,0 +1,69 @@
+import { DataSource } from 'typeorm';
+import { BindingRate } from '../../entities/binding-rate.entity';
+import { BindingType } from '../../entities/binding-type.entity';
+import { CoverFinish } from '../../entities/cover-finish.entity';
+import { CoverRate } from '../../entities/cover-rate.entity';
+import { CoverStyle } from '../../entities/cover-style.entity';
+import { PageRate } from '../../entities/page-rate.entity';
+import { PaperStock } from '../../entities/paper-stock.entity';
+import { PrintType } from '../../entities/print-type.entity';
+import { Quote } from '../../entities/quote.entity';
+import { TrimSize } from '../../entities/trim-size.entity';
+
+const dataSource = new DataSource({
+  type: 'postgres',
+  host: process.env.DATABASE_HOST ?? 'localhost',
+  port: parseInt(process.env.DATABASE_PORT ?? '5432'),
+  username: process.env.DATABASE_USER ?? 'postgres',
+  password: process.env.DATABASE_PASSWORD ?? '',
+  database: process.env.DATABASE_NAME ?? 'quoter_db',
+  entities: [TrimSize, CoverStyle, CoverFinish, PrintType, PaperStock, BindingType, Quote, PageRate, CoverRate, BindingRate],
+  synchronize: true,
+});
+
+async function seedPricing(): Promise<void> {
+  await dataSource.initialize();
+
+  // page_rates: printTypeId × paperStockId
+  // printTypeId 1 = Black & White, 2 = Color
+  // paperStockId 1 = 60lb Natural, 2 = 70lb White, 3 = 80lb White
+  await dataSource.getRepository(PageRate).save([
+    { printTypeId: 1, paperStockId: 1, ratePerPage: 0.0350 },
+    { printTypeId: 1, paperStockId: 2, ratePerPage: 0.0400 },
+    { printTypeId: 1, paperStockId: 3, ratePerPage: 0.0450 },
+    { printTypeId: 2, paperStockId: 1, ratePerPage: 0.0850 },
+    { printTypeId: 2, paperStockId: 2, ratePerPage: 0.0950 },
+    { printTypeId: 2, paperStockId: 3, ratePerPage: 0.1050 },
+  ]);
+
+  // cover_rates: coverStyleId × coverFinishId
+  // coverStyleId 1 = Softcover, 2 = Hardcover, 3 = Dust Jacket
+  // coverFinishId 1 = Gloss, 2 = Matte, 3 = Textured
+  await dataSource.getRepository(CoverRate).save([
+    { coverStyleId: 1, coverFinishId: 1, basePrice: 3.50 },
+    { coverStyleId: 1, coverFinishId: 2, basePrice: 4.00 },
+    { coverStyleId: 1, coverFinishId: 3, basePrice: 4.75 },
+    { coverStyleId: 2, coverFinishId: 1, basePrice: 8.00 },
+    { coverStyleId: 2, coverFinishId: 2, basePrice: 8.50 },
+    { coverStyleId: 2, coverFinishId: 3, basePrice: 9.25 },
+    { coverStyleId: 3, coverFinishId: 1, basePrice: 10.00 },
+    { coverStyleId: 3, coverFinishId: 2, basePrice: 10.50 },
+    { coverStyleId: 3, coverFinishId: 3, basePrice: 11.25 },
+  ]);
+
+  // binding_rates: bindingTypeId
+  // bindingTypeId 1 = Perfect Bind, 2 = Saddle Stitch, 3 = Spiral
+  await dataSource.getRepository(BindingRate).save([
+    { bindingTypeId: 1, surcharge: 1.50 },
+    { bindingTypeId: 2, surcharge: 0.75 },
+    { bindingTypeId: 3, surcharge: 2.00 },
+  ]);
+
+  console.warn('Pricing seed complete.');
+  await dataSource.destroy();
+}
+
+seedPricing().catch((err) => {
+  console.error('Pricing seed failed:', err);
+  process.exit(1);
+});

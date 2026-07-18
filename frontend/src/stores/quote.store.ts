@@ -8,9 +8,17 @@ export interface QuoteState {
   printTypeId: number | null
   paperStockId: number | null
   bindingTypeId: number | null
+  pageCount: number | null
+  quantity: number | null
 }
 
-const TOTAL_STEPS = 6
+/** Tracks page count validity bounds when a trim size is selected */
+export interface PageCountBounds {
+  minPages: number
+  maxPages: number
+}
+
+const TOTAL_STEPS = 7
 
 const stepFieldMap: Record<number, keyof QuoteState> = {
   1: 'trimSizeId',
@@ -19,11 +27,12 @@ const stepFieldMap: Record<number, keyof QuoteState> = {
   4: 'printTypeId',
   5: 'paperStockId',
   6: 'bindingTypeId',
+  7: 'quantity',
 }
 
 /**
- * Central state for the 6-step quoter wizard.
- * Tracks current step and all selected product IDs.
+ * Central state for the 7-step quoter wizard.
+ * Tracks current step and all selected product IDs, page count, and quantity.
  */
 export const useQuoteStore = defineStore('quote', () => {
   const currentStep = ref(1)
@@ -34,15 +43,37 @@ export const useQuoteStore = defineStore('quote', () => {
     printTypeId: null,
     paperStockId: null,
     bindingTypeId: null,
+    pageCount: null,
+    quantity: null,
   })
+
+  /**
+   * Stores the valid page range for the currently selected trim size.
+   * Set by TrimSizeStep when the user picks a size.
+   */
+  const pageCountBounds = reactive<PageCountBounds>({ minPages: 24, maxPages: 840 })
 
   /** Updates one or more fields in the quote state */
   function updateQuoteState(updates: Partial<QuoteState>): void {
     Object.assign(quoteState, updates)
   }
 
-  /** Returns true if the current step has a selection */
+  /** Updates the min/max page bounds based on the selected trim size */
+  function setPageCountBounds(bounds: PageCountBounds): void {
+    pageCountBounds.minPages = bounds.minPages
+    pageCountBounds.maxPages = bounds.maxPages
+  }
+
+  /** Returns true if the current step has a valid selection */
   function isCurrentStepComplete(): boolean {
+    if (currentStep.value === 1) {
+      // Step 1 requires both a trim size AND a valid page count
+      if (quoteState.trimSizeId === null || quoteState.pageCount === null) return false
+      return (
+        quoteState.pageCount >= pageCountBounds.minPages &&
+        quoteState.pageCount <= pageCountBounds.maxPages
+      )
+    }
     const field = stepFieldMap[currentStep.value]
     return quoteState[field] !== null
   }
@@ -64,7 +95,9 @@ export const useQuoteStore = defineStore('quote', () => {
   return {
     currentStep,
     quoteState,
+    pageCountBounds,
     updateQuoteState,
+    setPageCountBounds,
     isCurrentStepComplete,
     goToNextStep,
     goToPreviousStep,

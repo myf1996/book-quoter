@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * QuoterWizard — orchestrates all 6 steps of the quote configuration flow
+ * QuoterWizard — orchestrates all 7 steps of the quote configuration flow
  */
 import { computed } from 'vue'
 import { useQuoteStore } from '@/stores/quote.store'
@@ -13,8 +13,9 @@ import CoverFinishStep from '@/components/steps/cover-finish.step.vue'
 import PrintTypeStep from '@/components/steps/print-type.step.vue'
 import PaperStockStep from '@/components/steps/paper-stock.step.vue'
 import BindingStep from '@/components/steps/binding.step.vue'
+import QuantityStep from '@/components/steps/quantity.step.vue'
 
-const TOTAL_STEPS = 6
+const TOTAL_STEPS = 7
 const quoteStore = useQuoteStore()
 
 const stepComponents = [
@@ -24,6 +25,7 @@ const stepComponents = [
   PrintTypeStep,
   PaperStockStep,
   BindingStep,
+  QuantityStep,
 ]
 
 const currentStepComponent = computed(() => stepComponents[quoteStore.currentStep - 1])
