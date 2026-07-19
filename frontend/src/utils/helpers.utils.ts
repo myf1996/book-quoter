@@ -1,7 +1,11 @@
 import axios from 'axios'
 
-/** Base axios instance — all requests go through /api which Vite proxies to port 5000 */
-export const api = axios.create({ baseURL: '/api' })
+const baseURL = import.meta.env.VITE_API_URL
+  ? `${import.meta.env.VITE_API_URL}/api`
+  : '/api'
+
+/** Base axios instance — uses VITE_API_URL in production, Vite proxy in dev */
+export const api = axios.create({ baseURL })
 
 // Attach JWT Bearer token from localStorage on every outgoing request
 api.interceptors.request.use((config) => {
