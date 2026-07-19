@@ -1,62 +1,144 @@
 # Database Reference — Book Printing Quoter
 
-**DBMS:** PostgreSQL 16
-**ORM:** TypeORM (type-safe repositories, no raw SQL)
+**DBMS:** PostgreSQL 16  
+**ORM:** TypeORM (type-safe repositories, no raw SQL)  
 **Database name (local):** `quoter_db`
 
 ---
 
 ## Entity Base Class
 
-All 11 entities extend **`BaseAppEntity`** (abstract TypeORM class in `backend/src/entities/`), which provides:
+All 11 entities extend **`BaseAppEntity`** (abstract TypeORM class), which provides:
 
 | Column | SQL type | Notes |
 |--------|----------|-------|
-| `created_at` | `timestamp` | Auto-set on insert |
-| `deleted_at` | `timestamp` nullable | Soft-delete (`@DeleteDateColumn`) |
+| `created_at` | `timestamp` | Auto-set on insert (`@CreateDateColumn`) |
+| `deleted_at` | `timestamp` nullable | Soft-delete (`@DeleteDateColumn`) — set on delete, `null` for active records |
 
-`SnakeNamingStrategy` from `typeorm-naming-strategies` is applied globally — all camelCase TS properties map to `snake_case` columns automatically.
+**`SnakeNamingStrategy`** from `typeorm-naming-strategies` is applied globally — all camelCase TypeScript properties map to `snake_case` columns automatically (e.g. `createdAt` → `created_at`).
+
+**UUID primary keys** — All entities use `@PrimaryGeneratedColumn('uuid')`. PKs are `uuid` in PostgreSQL, `string` in TypeScript.
 
 ---
 
-## Phase 3 Tables — Authentication
+## `ProductStatus` Enum
 
-### users
+All 6 product option entities carry a `status` column using this enum:
 
-Stores registered user accounts. Added in Phase 3.
+```typescript
+export enum ProductStatus {
+  ACTIVE = 'active',
+  INACTIVE = 'inactive',
+}
+```
+
+- `active` — visible in the customer wizard via `GET /api/products/*`
+- `inactive` — hidden from customers; only visible in admin endpoints
+- New records created by admins default to `inactive`
+
+---
+
+## Users Table
+
+Stores registered user accounts.
+
+**Entity:** `backend/src/entities/user.entity.ts`
 
 | Column | SQL type | TS type | Notes |
 |--------|----------|---------|-------|
-| `id` | `serial` PK | `number` | Auto-increment |
+| `id` | `uuid` PK | `string` | Auto-generated UUID |
 | `name` | `varchar(255)` NOT NULL | `string` | Display name |
 | `email` | `varchar(255)` UNIQUE NOT NULL | `string` | Login identifier |
-| `password_hash` | `varchar(255)` NOT NULL | `string` | bcrypt hash — never returned by the API |
-| `role` | `enum('admin','customer')` | `UserRole` | Default `customer`; included in JWT payload |
+| `password_hash` | `varchar(255)` NOT NULL | `string` | bcrypt hash — **never returned by the API** |
+| `role` | `enum('admin','customer')` NOT NULL | `UserRole` | Default `'customer'`; included in JWT payload |
 | `created_at` | `timestamp` | `Date` | Via `BaseAppEntity` |
 | `deleted_at` | `timestamp` nullable | `Date \| null` | Soft-delete via `BaseAppEntity` |
 
-Entity: `backend/src/entities/user.entity.ts`
+**`UserRole` enum:**
+```typescript
+export enum UserRole {
+  ADMIN = 'admin',
+  CUSTOMER = 'customer',
+}
+```
+
+The `passwordHash` field is excluded from every API response via TypeScript destructuring in `AuthService`.
+
+**Seed:** The `seed.ts` script creates `admin@onpress.com` / `Admin123!` as an admin user if it does not already exist.
 
 ---
 
-## Phase 1 Tables — Product Catalogue
+## Quotes Table
 
-These tables store the option sets that populate each wizard step.
+Stores completed quote configurations and their calculated prices.
+
+**Entity:** `backend/src/entities/quote.entity.ts`
+
+| Column | SQL type | TS type | Notes |
+|--------|----------|---------|-------|
+| `id` | `uuid` PK | `string` | Auto-generated UUID |
+| `config` | `jsonb` | `QuoteConfig` | All six wizard option UUIDs (see `QuoteConfig` shape below) |
+| `page_count` | `integer` | `number` | Number of pages in the book |
+| `quantity` | `integer` | `number` | Print run quantity |
+| `total_price` | `decimal(10,2)` | `number` | Final price after tax |
+| `price_breakdown` | `jsonb` | `PriceBreakdown` | Full line-item breakdown (see below) |
+| `user_id` | `uuid` nullable | `string \| null` | FK → `users.id`; null for quotes saved before auth existed |
+| `created_at` | `timestamp` | `Date` | Via `BaseAppEntity` |
+| `deleted_at` | `timestamp` nullable | `Date \| null` | Soft-delete via `BaseAppEntity` |
+
+**`QuoteConfig` shape (stored as JSONB):**
+```typescript
+{
+  trimSizeId: string      // UUID
+  coverStyleId: string    // UUID
+  coverFinishId: string   // UUID
+  printTypeId: string     // UUID
+  paperStockId: string    // UUID
+  bindingTypeId: string   // UUID
+}
+```
+
+**`PriceBreakdown` shape (stored as JSONB):**
+```typescript
+{
+  pageCost: number      // ratePerPage × pageCount
+  coverCost: number     // coverRate.basePrice
+  bindingCost: number   // bindingRate.surcharge
+  subtotal: number      // (pageCost + coverCost + bindingCost) × quantity
+  tax: number           // subtotal × 0.08
+  total: number         // subtotal + tax
+}
+```
+
+---
+
+## Product Catalogue Tables
+
+These 6 tables store the option sets that populate each step of the customer wizard. All share the same base structure plus the `status` column.
 
 ### trim_sizes
 
 | Column | SQL type | TS type | Notes |
 |--------|----------|---------|-------|
-| `id` | `serial` PK | `number` | Auto-increment |
-| `name` | `varchar(100)` UNIQUE | `string` | e.g. "Digest 5.5×8.5" |
-| `width` | `decimal(5,2)` | `number` | Inches |
-| `height` | `decimal(5,2)` | `number` | Inches |
-| `min_pages` | `integer` | `number` | Default 24 |
-| `max_pages` | `integer` | `number` | Default 840 |
-| `created_at` | `timestamp` | `Date` | Via `BaseAppEntity` |
-| `deleted_at` | `timestamp` nullable | `Date \| null` | Soft-delete via `BaseAppEntity` |
+| `id` | `uuid` PK | `string` | |
+| `name` | `varchar(100)` UNIQUE | `string` | e.g. `"Digest 5.5×8.5"` |
+| `width` | `decimal(5,2)` | `number` | Book width in inches |
+| `height` | `decimal(5,2)` | `number` | Book height in inches |
+| `min_pages` | `integer` | `number` | Default `24` |
+| `max_pages` | `integer` | `number` | Default `840` |
+| `status` | `enum('active','inactive')` | `ProductStatus` | Default `inactive` |
+| `created_at` | `timestamp` | `Date` | |
+| `deleted_at` | `timestamp` nullable | `Date \| null` | |
 
-Entity: `backend/src/entities/trim-size.entity.ts`
+**Seeded records (all `active`):**
+
+| Name | Width | Height | Min Pages | Max Pages |
+|------|-------|--------|-----------|-----------|
+| Digest 5.5×8.5 | 5.50 | 8.50 | 24 | 840 |
+| Trade 6×9 | 6.00 | 9.00 | 24 | 840 |
+| Large 8.5×11 | 8.50 | 11.00 | 24 | 600 |
+| Hardcover 6×9 | 6.00 | 9.00 | 48 | 600 |
+| Square 8×8 | 8.00 | 8.00 | 24 | 400 |
 
 ---
 
@@ -64,38 +146,29 @@ Entity: `backend/src/entities/trim-size.entity.ts`
 
 | Column | SQL type | TS type | Notes |
 |--------|----------|---------|-------|
-| `id` | `serial` PK | `number` | |
-| `name` | `varchar(100)` UNIQUE | `string` | e.g. "Softcover", "Hardcover" |
-| `created_at` | `timestamp` | `Date` | Via `BaseAppEntity` |
-| `deleted_at` | `timestamp` nullable | `Date \| null` | Soft-delete via `BaseAppEntity` |
+| `id` | `uuid` PK | `string` | |
+| `name` | `varchar(100)` UNIQUE | `string` | |
+| `status` | `enum('active','inactive')` | `ProductStatus` | Default `inactive` |
+| `created_at` | `timestamp` | `Date` | |
+| `deleted_at` | `timestamp` nullable | `Date \| null` | |
 
-Entity: `backend/src/entities/cover-style.entity.ts`
+**Seeded records (all `active`):** Softcover, Hardcover, Dust Jacket
 
 ---
 
 ### cover_finishes
 
-| Column | SQL type | TS type | Notes |
-|--------|----------|---------|-------|
-| `id` | `serial` PK | `number` | |
-| `name` | `varchar(100)` UNIQUE | `string` | e.g. "Gloss", "Matte" |
-| `created_at` | `timestamp` | `Date` | Via `BaseAppEntity` |
-| `deleted_at` | `timestamp` nullable | `Date \| null` | Soft-delete via `BaseAppEntity` |
+Same structure as `cover_styles`.
 
-Entity: `backend/src/entities/cover-finish.entity.ts`
+**Seeded records (all `active`):** Gloss, Matte, Textured
 
 ---
 
 ### print_types
 
-| Column | SQL type | TS type | Notes |
-|--------|----------|---------|-------|
-| `id` | `serial` PK | `number` | |
-| `name` | `varchar(100)` UNIQUE | `string` | e.g. "Black & White", "Color" |
-| `created_at` | `timestamp` | `Date` | Via `BaseAppEntity` |
-| `deleted_at` | `timestamp` nullable | `Date \| null` | Soft-delete via `BaseAppEntity` |
+Same structure as `cover_styles`.
 
-Entity: `backend/src/entities/print-type.entity.ts`
+**Seeded records (all `active`):** Black & White, Color
 
 ---
 
@@ -103,153 +176,167 @@ Entity: `backend/src/entities/print-type.entity.ts`
 
 | Column | SQL type | TS type | Notes |
 |--------|----------|---------|-------|
-| `id` | `serial` PK | `number` | |
-| `name` | `varchar(100)` UNIQUE | `string` | e.g. "60lb Natural" |
-| `weight` | `varchar(50)` nullable | `string` | e.g. "60lb" |
-| `created_at` | `timestamp` | `Date` | Via `BaseAppEntity` |
-| `deleted_at` | `timestamp` nullable | `Date \| null` | Soft-delete via `BaseAppEntity` |
+| `id` | `uuid` PK | `string` | |
+| `name` | `varchar(100)` UNIQUE | `string` | |
+| `weight` | `varchar(50)` nullable | `string \| null` | e.g. `"60lb"` |
+| `status` | `enum('active','inactive')` | `ProductStatus` | Default `inactive` |
+| `created_at` | `timestamp` | `Date` | |
+| `deleted_at` | `timestamp` nullable | `Date \| null` | |
 
-Entity: `backend/src/entities/paper-stock.entity.ts`
+**Seeded records (all `active`):** 60lb Natural, 70lb White, 80lb White
 
 ---
 
 ### binding_types
 
-| Column | SQL type | TS type | Notes |
-|--------|----------|---------|-------|
-| `id` | `serial` PK | `number` | |
-| `name` | `varchar(100)` UNIQUE | `string` | e.g. "Perfect Bind", "Saddle Stitch" |
-| `created_at` | `timestamp` | `Date` | Via `BaseAppEntity` |
-| `deleted_at` | `timestamp` nullable | `Date \| null` | Soft-delete via `BaseAppEntity` |
+Same structure as `cover_styles`.
 
-Entity: `backend/src/entities/binding-type.entity.ts`
+**Seeded records (all `active`):** Perfect Bind, Saddle Stitch, Spiral
 
 ---
 
-## Phase 1 Tables — Quotes
+## Pricing Rate Tables
 
-### quotes
-
-Stores completed quote configurations and their calculated prices. Extended in Phase 2 to include pricing columns. Extended in Phase 3 to associate quotes with a user.
-
-| Column | SQL type | TS type | Notes |
-|--------|----------|---------|-------|
-| `id` | `serial` PK | `number` | Auto-increment |
-| `config` | `jsonb` | `QuoteConfig` | All six wizard option IDs (trimSizeId, coverStyleId, coverFinishId, printTypeId, paperStockId, bindingTypeId) |
-| `page_count` | `integer` | `number` | Added in Phase 2 |
-| `quantity` | `integer` | `number` | Added in Phase 2 |
-| `total_price` | `decimal(10,2)` | `number` | Added in Phase 2 |
-| `price_breakdown` | `jsonb` | `PriceBreakdown` | Added in Phase 2; full line-item breakdown |
-| `user_id` | `integer` nullable | `number \| null` | Added in Phase 3; FK to `users.id` — null for anonymous quotes saved before auth existed |
-| `created_at` | `timestamp` | `Date` | Via `BaseAppEntity` |
-| `deleted_at` | `timestamp` nullable | `Date \| null` | Soft-delete via `BaseAppEntity` |
-
-`PriceBreakdown` shape: `{ pageCost, coverCost, bindingCost, subtotal, tax, total }` (all `number`, USD).
-
-Entity: `backend/src/entities/quote.entity.ts`
-
----
-
-## Phase 2 Tables — Pricing Rates
-
-Three new rate tables added in Phase 2 to power the pricing engine. Seeded via `backend/src/database/seeds/pricing-seed.ts`.
+Three tables that power the pricing engine. Seeded via `backend/src/database/seeds/seed.ts`.
 
 ### page_rates
 
-Stores the per-page printing cost for each `printType` + `paperStock` combination.
+Per-page printing cost for each Print Type + Paper Stock combination.
+
+**Entity:** `backend/src/entities/page-rate.entity.ts`
 
 | Column | SQL type | TS type | Notes |
 |--------|----------|---------|-------|
-| `id` | `serial` PK | `number` | |
-| `print_type_id` | `integer` | `number` | FK reference (logical) to `print_types.id` |
-| `paper_stock_id` | `integer` | `number` | FK reference (logical) to `paper_stocks.id` |
+| `id` | `uuid` PK | `string` | |
+| `print_type_id` | `uuid` | `string` | FK → `print_types.id` |
+| `paper_stock_id` | `uuid` | `string` | FK → `paper_stocks.id` |
 | `rate_per_page` | `decimal(8,4)` | `number` | Cost per page in USD |
-| `created_at` | `timestamp` | `Date` | Via `BaseAppEntity` |
-| `deleted_at` | `timestamp` nullable | `Date \| null` | Soft-delete via `BaseAppEntity` |
+| `created_at` | `timestamp` | `Date` | |
+| `deleted_at` | `timestamp` nullable | `Date \| null` | |
 
-Unique constraint: `(print_type_id, paper_stock_id)`.
+**Seeded records (6 rows):**
 
-Seeded values (6 rows):
-
-| print_type_id | paper_stock_id | rate_per_page |
-|---------------|----------------|---------------|
-| 1 (B&W) | 1 (60lb Natural) | $0.0350 |
-| 1 (B&W) | 2 (70lb White) | $0.0400 |
-| 1 (B&W) | 3 (80lb White) | $0.0450 |
-| 2 (Color) | 1 (60lb Natural) | $0.0850 |
-| 2 (Color) | 2 (70lb White) | $0.0950 |
-| 2 (Color) | 3 (80lb White) | $0.1050 |
-
-Entity: `backend/src/entities/page-rate.entity.ts`
+| Print Type | Paper Stock | Rate / Page |
+|------------|-------------|-------------|
+| Black & White | 60lb Natural | $0.0350 |
+| Black & White | 70lb White | $0.0400 |
+| Black & White | 80lb White | $0.0450 |
+| Color | 60lb Natural | $0.0850 |
+| Color | 70lb White | $0.0950 |
+| Color | 80lb White | $0.1050 |
 
 ---
 
 ### cover_rates
 
-Stores the flat cover cost for each `coverStyle` + `coverFinish` combination.
+Flat cover cost for each Cover Style + Cover Finish combination.
+
+**Entity:** `backend/src/entities/cover-rate.entity.ts`
 
 | Column | SQL type | TS type | Notes |
 |--------|----------|---------|-------|
-| `id` | `serial` PK | `number` | |
-| `cover_style_id` | `integer` | `number` | FK reference (logical) to `cover_styles.id` |
-| `cover_finish_id` | `integer` | `number` | FK reference (logical) to `cover_finishes.id` |
-| `rate_per_cover` | `decimal(8,2)` | `number` | Flat cover cost in USD |
-| `created_at` | `timestamp` | `Date` | Via `BaseAppEntity` |
-| `deleted_at` | `timestamp` nullable | `Date \| null` | Soft-delete via `BaseAppEntity` |
+| `id` | `uuid` PK | `string` | |
+| `cover_style_id` | `uuid` | `string` | FK → `cover_styles.id` |
+| `cover_finish_id` | `uuid` | `string` | FK → `cover_finishes.id` |
+| `base_price` | `decimal(8,2)` | `number` | Flat cover cost in USD |
+| `created_at` | `timestamp` | `Date` | |
+| `deleted_at` | `timestamp` nullable | `Date \| null` | |
 
-Unique constraint: `(cover_style_id, cover_finish_id)`.
+**Seeded records (9 rows):**
 
-Seeded values (9 rows):
-
-| cover_style_id | cover_finish_id | rate_per_cover |
-|----------------|-----------------|----------------|
-| 1 (Softcover) | 1 (Gloss) | $3.50 |
-| 1 (Softcover) | 2 (Matte) | $4.00 |
-| 1 (Softcover) | 3 (Textured) | $4.75 |
-| 2 (Hardcover) | 1 (Gloss) | $8.00 |
-| 2 (Hardcover) | 2 (Matte) | $8.50 |
-| 2 (Hardcover) | 3 (Textured) | $9.25 |
-| 3 (Dust Jacket) | 1 (Gloss) | $10.00 |
-| 3 (Dust Jacket) | 2 (Matte) | $10.50 |
-| 3 (Dust Jacket) | 3 (Textured) | $11.25 |
-
-Entity: `backend/src/entities/cover-rate.entity.ts`
+| Cover Style | Cover Finish | Base Price |
+|-------------|--------------|------------|
+| Softcover | Gloss | $3.50 |
+| Softcover | Matte | $4.00 |
+| Softcover | Textured | $4.75 |
+| Hardcover | Gloss | $8.00 |
+| Hardcover | Matte | $8.50 |
+| Hardcover | Textured | $9.25 |
+| Dust Jacket | Gloss | $10.00 |
+| Dust Jacket | Matte | $10.50 |
+| Dust Jacket | Textured | $11.25 |
 
 ---
 
 ### binding_rates
 
-Stores the binding cost for each binding type.
+Binding surcharge per binding type.
+
+**Entity:** `backend/src/entities/binding-rate.entity.ts`
 
 | Column | SQL type | TS type | Notes |
 |--------|----------|---------|-------|
-| `id` | `serial` PK | `number` | |
-| `binding_type_id` | `integer` | `number` | FK reference (logical) to `binding_types.id` |
-| `rate_per_bind` | `decimal(8,2)` | `number` | Binding cost in USD |
-| `created_at` | `timestamp` | `Date` | Via `BaseAppEntity` |
-| `deleted_at` | `timestamp` nullable | `Date \| null` | Soft-delete via `BaseAppEntity` |
+| `id` | `uuid` PK | `string` | |
+| `binding_type_id` | `uuid` | `string` | FK → `binding_types.id` |
+| `surcharge` | `decimal(8,2)` | `number` | Binding cost in USD |
+| `created_at` | `timestamp` | `Date` | |
+| `deleted_at` | `timestamp` nullable | `Date \| null` | |
 
-Unique constraint: `(binding_type_id)`.
+**Seeded records (3 rows):**
 
-Seeded values (3 rows):
-
-| binding_type_id | rate_per_bind |
-|-----------------|---------------|
-| 1 (Perfect Bind) | $1.50 |
-| 2 (Saddle Stitch) | $0.75 |
-| 3 (Spiral) | $2.00 |
-
-Entity: `backend/src/entities/binding-rate.entity.ts`
+| Binding Type | Surcharge |
+|--------------|-----------|
+| Perfect Bind | $1.50 |
+| Saddle Stitch | $0.75 |
+| Spiral | $2.00 |
 
 ---
 
 ## Seeding
 
-Run the Phase 2 pricing seed after initial migration:
+Run the full seed script after creating the database. It is safe to run multiple times — existing records are found via `findOne` and skipped; only missing records are created.
 
 ```bash
 cd backend
-npx ts-node src/database/seeds/pricing-seed.ts
+npx ts-node src/database/seeds/seed.ts
 ```
 
-This inserts 6 page rates, 9 cover rates, and 3 binding rates. The seed uses `save()` (upsert-safe via TypeORM) and will not duplicate rows if run again because of the unique constraints.
+**What the seed creates:**
+1. All 5 trim sizes (status: active)
+2. All 3 cover styles (status: active)
+3. All 3 cover finishes (status: active)
+4. All 2 print types (status: active)
+5. All 3 paper stocks (status: active)
+6. All 3 binding types (status: active)
+7. 6 page rates
+8. 9 cover rates
+9. 3 binding rates
+10. Admin user: `admin@onpress.com` / `Admin123!` (role: admin) — only created if not already present
+
+**Total:** 5+3+3+2+3+3 = 19 product records + 18 rate rows + 1 admin user = **38 rows** across 10 tables.
+
+---
+
+## Entity Relationships
+
+```
+users ──────────────────────────────────── quotes
+                                            (user_id FK, nullable)
+
+trim_sizes ─────────────────────────────── (stored by UUID in quotes.config jsonb)
+cover_styles ───────────────────────────── (same)
+cover_finishes ─────────────────────────── (same)
+print_types ────────────────────────────── (same)
+paper_stocks ───────────────────────────── (same)
+binding_types ──────────────────────────── (same)
+
+print_types ──┐
+              ├── page_rates
+paper_stocks ─┘
+
+cover_styles ──┐
+               ├── cover_rates
+cover_finishes ┘
+
+binding_types ─── binding_rates
+```
+
+The 6 config IDs inside `quotes.config` (JSONB) are not foreign keys enforced by PostgreSQL — they are stored as plain UUIDs. This keeps the quote record self-contained and avoids cascade issues if a product option is later deleted.
+
+---
+
+## Schema Synchronization
+
+In **development** (`NODE_ENV=development`), TypeORM's `synchronize: true` auto-applies schema changes on every restart. No migrations needed locally.
+
+In **production**, set `synchronize: false` and use TypeORM migrations (`npm run migration:generate`, `npm run migration:run`).
