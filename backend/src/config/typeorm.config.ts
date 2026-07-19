@@ -14,19 +14,36 @@ import { Quote } from '../entities/quote.entity';
 import { TrimSize } from '../entities/trim-size.entity';
 import { User } from '../entities/user.entity';
 
-/** TypeORM connection config — reads from environment variables */
-export const typeOrmConfig = (): TypeOrmModuleOptions => ({
-  type: 'postgres',
-  host: process.env.DATABASE_HOST ?? 'localhost',
-  port: parseInt(process.env.DATABASE_PORT ?? '5432'),
-  username: process.env.DATABASE_USER ?? 'postgres',
-  password: process.env.DATABASE_PASSWORD ?? '',
-  database: process.env.DATABASE_NAME ?? 'quoter_db',
-  entities: [
+/** TypeORM connection config — prefers DATABASE_URL (Railway) over individual vars */
+export const typeOrmConfig = (): TypeOrmModuleOptions => {
+  const isProduction = process.env.NODE_ENV === 'production';
+  const entities = [
     TrimSize, CoverStyle, CoverFinish, PrintType, PaperStock, BindingType,
     Quote, PageRate, CoverRate, BindingRate, User, Coupon, CouponUsage,
-  ],
-  namingStrategy: new SnakeNamingStrategy(),
-  synchronize: process.env.NODE_ENV !== 'production',
-  logging: process.env.NODE_ENV === 'development',
-});
+  ];
+  const shared = {
+    entities,
+    namingStrategy: new SnakeNamingStrategy(),
+    synchronize: process.env.DB_SYNCHRONIZE === 'true' || !isProduction,
+    logging: !isProduction,
+  };
+
+  if (process.env.DATABASE_URL) {
+    return {
+      type: 'postgres',
+      url: process.env.DATABASE_URL,
+      ssl: isProduction ? { rejectUnauthorized: false } : false,
+      ...shared,
+    };
+  }
+
+  return {
+    type: 'postgres',
+    host: process.env.DATABASE_HOST ?? 'localhost',
+    port: parseInt(process.env.DATABASE_PORT ?? '5432'),
+    username: process.env.DATABASE_USER ?? 'postgres',
+    password: process.env.DATABASE_PASSWORD ?? '',
+    database: process.env.DATABASE_NAME ?? 'quoter_db',
+    ...shared,
+  };
+};
