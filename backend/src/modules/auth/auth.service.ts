@@ -13,7 +13,7 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 /** Shape returned by register and login endpoints */
 export interface AuthResponse {
   accessToken: string;
-  user: { id: number; name: string; email: string; role: UserRole };
+  user: { id: string; name: string; email: string; role: UserRole };
 }
 
 /**
@@ -76,7 +76,7 @@ export class AuthService {
    * @returns User entity without passwordHash
    * @throws NotFoundException if no matching user exists
    */
-  async getProfile(userId: number): Promise<Omit<User, 'passwordHash'>> {
+  async getProfile(userId: string): Promise<Omit<User, 'passwordHash'>> {
     const user = await this.userRepo.findOne({ where: { id: userId } });
     if (!user) {
       throw new NotFoundException('User not found');
@@ -95,9 +95,9 @@ export class AuthService {
    * @throws NotFoundException if user not found
    */
   async updateProfile(
-    userId: number,
+    userId: string,
     dto: UpdateProfileDto,
-  ): Promise<{ id: number; name: string; email: string; role: UserRole }> {
+  ): Promise<{ id: string; name: string; email: string; role: UserRole }> {
     const user = await this.userRepo.findOne({ where: { id: userId } });
     if (!user) {
       throw new NotFoundException('User not found');
@@ -117,7 +117,7 @@ export class AuthService {
    * @throws UnauthorizedException if currentPassword is wrong
    */
   async changePassword(
-    userId: number,
+    userId: string,
     dto: ChangePasswordDto,
   ): Promise<{ message: string }> {
     const user = await this.userRepo.findOne({ where: { id: userId } });

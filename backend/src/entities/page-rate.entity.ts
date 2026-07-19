@@ -7,8 +7,8 @@ import { PrintType } from './print-type.entity';
 @Entity('page_rates')
 @Unique(['printType', 'paperStock'])
 export class PageRate extends BaseAppEntity {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
   @ManyToOne(() => PrintType, { onDelete: 'RESTRICT' })
   printType: PrintType;

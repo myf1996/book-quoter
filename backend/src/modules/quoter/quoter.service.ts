@@ -75,7 +75,7 @@ export class QuoterService {
    * @param userId - ID of the authenticated user saving the quote
    * @returns The saved Quote entity with all fields populated
    */
-  async saveQuote(dto: CalculateQuoteDto, userId: number): Promise<Quote> {
+  async saveQuote(dto: CalculateQuoteDto, userId: string): Promise<Quote> {
     const breakdown = await this.calculatePrice(dto);
 
     const quote = this.quoteRepo.create({
@@ -98,14 +98,22 @@ export class QuoterService {
   }
 
   /**
-   * Returns all quotes saved by a specific user, newest first.
+   * Returns a paginated list of quotes for a specific user, newest first.
    * @param userId - The authenticated user's ID
-   * @returns Array of Quote entities ordered by createdAt descending
+   * @param page - 1-based page number (default 1)
+   * @param limit - Items per page (default 20)
    */
-  async getUserQuotes(userId: number): Promise<Quote[]> {
-    return this.quoteRepo.find({
+  async getUserQuotes(
+    userId: string,
+    page = 1,
+    limit = 20,
+  ): Promise<{ data: Quote[]; total: number; page: number; limit: number; totalPages: number }> {
+    const [data, total] = await this.quoteRepo.findAndCount({
       where: { user: { id: userId } },
       order: { createdAt: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
     });
+    return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 }

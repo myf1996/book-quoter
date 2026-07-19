@@ -4,7 +4,7 @@ import { api } from '@/utils/helpers.utils'
 
 /** Authenticated user shape returned by the backend */
 export interface AuthUser {
-  id: number
+  id: string
   name: string
   email: string
   role: 'admin' | 'customer'
@@ -64,7 +64,7 @@ export const useAuthStore = defineStore('auth', () => {
    * @param name - New display name (min 2 chars)
    */
   async function updateProfile(name: string): Promise<void> {
-    const { data } = await api.patch<{ id: number; name: string; email: string }>('/auth/profile', { name })
+    const { data } = await api.patch<{ id: string; name: string; email: string }>('/auth/profile', { name })
     if (user.value) user.value = { ...user.value, name: data.name }
   }
 

@@ -6,8 +6,8 @@ import { BindingType } from './binding-type.entity';
 @Entity('binding_rates')
 @Unique(['bindingType'])
 export class BindingRate extends BaseAppEntity {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
   @ManyToOne(() => BindingType, { onDelete: 'RESTRICT' })
   bindingType: BindingType;

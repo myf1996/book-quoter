@@ -83,7 +83,7 @@ export class AuthController {
   updateProfile(
     @Request() req: AuthRequest,
     @Body() dto: UpdateProfileDto,
-  ): Promise<{ id: number; name: string; email: string; role: UserRole }> {
+  ): Promise<{ id: string; name: string; email: string; role: UserRole }> {
     return this.authService.updateProfile(req.user.id, dto);
   }
 

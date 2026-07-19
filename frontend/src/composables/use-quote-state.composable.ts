@@ -2,7 +2,7 @@ import { api } from '@/utils/helpers.utils'
 import { onMounted, ref } from 'vue'
 
 export interface ProductOption {
-  id: number
+  id: string
   name: string
   [key: string]: unknown
 }

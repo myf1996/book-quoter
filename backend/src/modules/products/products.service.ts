@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { ProductStatus } from '../../common/enums/product-status.enum';
 import { BindingType } from '../../entities/binding-type.entity';
 import { CoverFinish } from '../../entities/cover-finish.entity';
 import { CoverStyle } from '../../entities/cover-style.entity';
@@ -8,9 +9,11 @@ import { PaperStock } from '../../entities/paper-stock.entity';
 import { PrintType } from '../../entities/print-type.entity';
 import { TrimSize } from '../../entities/trim-size.entity';
 
+const ACTIVE = { status: ProductStatus.ACTIVE };
+
 /**
  * Handles all product catalogue queries for the quoter wizard.
- * Each method returns the full list for its product type.
+ * Only returns ACTIVE items so inactive options never reach customers.
  */
 @Injectable()
 export class ProductsService {
@@ -23,33 +26,33 @@ export class ProductsService {
     @InjectRepository(BindingType) private bindingTypeRepo: Repository<BindingType>,
   ) {}
 
-  /** @returns All available trim sizes */
+  /** @returns Active trim sizes visible to customers */
   getAllTrimSizes(): Promise<TrimSize[]> {
-    return this.trimSizeRepo.find({ order: { id: 'ASC' } });
+    return this.trimSizeRepo.find({ where: ACTIVE, order: { id: 'ASC' } });
   }
 
-  /** @returns All available cover styles */
+  /** @returns Active cover styles visible to customers */
   getAllCoverStyles(): Promise<CoverStyle[]> {
-    return this.coverStyleRepo.find({ order: { id: 'ASC' } });
+    return this.coverStyleRepo.find({ where: ACTIVE, order: { id: 'ASC' } });
   }
 
-  /** @returns All available cover finishes */
+  /** @returns Active cover finishes visible to customers */
   getAllCoverFinishes(): Promise<CoverFinish[]> {
-    return this.coverFinishRepo.find({ order: { id: 'ASC' } });
+    return this.coverFinishRepo.find({ where: ACTIVE, order: { id: 'ASC' } });
   }
 
-  /** @returns All available print types */
+  /** @returns Active print types visible to customers */
   getAllPrintTypes(): Promise<PrintType[]> {
-    return this.printTypeRepo.find({ order: { id: 'ASC' } });
+    return this.printTypeRepo.find({ where: ACTIVE, order: { id: 'ASC' } });
   }
 
-  /** @returns All available paper stocks */
+  /** @returns Active paper stocks visible to customers */
   getAllPaperStocks(): Promise<PaperStock[]> {
-    return this.paperStockRepo.find({ order: { id: 'ASC' } });
+    return this.paperStockRepo.find({ where: ACTIVE, order: { id: 'ASC' } });
   }
 
-  /** @returns All available binding types */
+  /** @returns Active binding types visible to customers */
   getAllBindingTypes(): Promise<BindingType[]> {
-    return this.bindingTypeRepo.find({ order: { id: 'ASC' } });
+    return this.bindingTypeRepo.find({ where: ACTIVE, order: { id: 'ASC' } });
   }
 }

@@ -12,7 +12,7 @@ const quoteStore = useQuoteStore()
 const { priceBreakdown, isCalculating, priceError } = useQuotePrice()
 
 interface LabelMap {
-  [id: number]: string
+  [id: string]: string
 }
 
 const labels = ref<Record<string, LabelMap>>({
@@ -36,7 +36,7 @@ async function loadLabels(): Promise<void> {
         api.get('/products/binding-types'),
       ])
 
-    const toMap = (items: { id: number; name: string }[]): LabelMap =>
+    const toMap = (items: { id: string; name: string }[]): LabelMap =>
       Object.fromEntries(items.map((i) => [i.id, i.name]))
 
     labels.value = {

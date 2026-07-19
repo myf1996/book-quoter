@@ -21,7 +21,7 @@ import BindingStep from '@/components/steps/binding.step.vue'
 import QuantityStep from '@/components/steps/quantity.step.vue'
 
 interface SavedQuoteResponse {
-  id: number
+  id: string
 }
 
 const TOTAL_STEPS = 7
@@ -30,7 +30,7 @@ const authStore = useAuthStore()
 
 const showAuthModal = ref(false)
 const isSavingQuote = ref(false)
-const savedQuoteId = ref<number | null>(null)
+const savedQuoteId = ref<string | null>(null)
 const saveError = ref<string | null>(null)
 
 const stepComponents = [

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, ParseIntPipe, Post, Query, Request, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AuthenticatedUser } from '../auth/strategies/jwt.strategy';
 import { PriceBreakdown, Quote } from '../../entities/quote.entity';
@@ -40,13 +40,17 @@ export class QuoterController {
   }
 
   /**
-   * GET /api/quoter/quotes
-   * Returns all quotes saved by the authenticated user, newest first.
+   * GET /api/quoter/quotes?page=1&limit=20
+   * Returns a paginated list of quotes saved by the authenticated user, newest first.
    * Requires a valid JWT Bearer token.
    */
   @Get('quotes')
   @UseGuards(JwtAuthGuard)
-  getUserQuotes(@Request() req: AuthRequest): Promise<Quote[]> {
-    return this.quoterService.getUserQuotes(req.user.id);
+  getUserQuotes(
+    @Request() req: AuthRequest,
+    @Query('page', new ParseIntPipe({ optional: true })) page?: number,
+    @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
+  ): Promise<{ data: Quote[]; total: number; page: number; limit: number; totalPages: number }> {
+    return this.quoterService.getUserQuotes(req.user.id, page, limit);
   }
 }

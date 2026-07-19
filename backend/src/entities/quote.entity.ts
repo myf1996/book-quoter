@@ -3,12 +3,12 @@ import { BaseAppEntity } from './base-app.entity';
 import { User } from './user.entity';
 
 export interface QuoteConfig {
-  trimSizeId: number;
-  coverStyleId: number;
-  coverFinishId: number;
-  printTypeId: number;
-  paperStockId: number;
-  bindingTypeId: number;
+  trimSizeId: string;
+  coverStyleId: string;
+  coverFinishId: string;
+  printTypeId: string;
+  paperStockId: string;
+  bindingTypeId: string;
 }
 
 /** Full price breakdown for a quote */
@@ -24,8 +24,8 @@ export interface PriceBreakdown {
 /** Stores a completed quote configuration with pricing */
 @Entity('quotes')
 export class Quote extends BaseAppEntity {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
   @Column({ type: 'jsonb' })
   config: QuoteConfig;

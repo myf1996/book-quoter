@@ -4,18 +4,18 @@
  * Fetches product lookups in parallel so IDs are shown as real names.
  * Redirects to the quoter if unauthenticated.
  */
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.store'
 import { api } from '@/utils/helpers.utils'
 
 interface QuoteConfig {
-  trimSizeId: number
-  coverStyleId: number
-  coverFinishId: number
-  printTypeId: number
-  paperStockId: number
-  bindingTypeId: number
+  trimSizeId: string
+  coverStyleId: string
+  coverFinishId: string
+  printTypeId: string
+  paperStockId: string
+  bindingTypeId: string
 }
 
 interface PriceBreakdown {
@@ -28,7 +28,7 @@ interface PriceBreakdown {
 }
 
 interface SavedQuote {
-  id: number
+  id: string
   config: QuoteConfig
   pageCount: number
   quantity: number
@@ -39,37 +39,53 @@ interface SavedQuote {
 
 /** A product option returned by any /products/* endpoint */
 interface ProductOption {
-  id: number
+  id: string
   name: string
 }
 
 const router = useRouter()
 const authStore = useAuthStore()
 
+interface PaginatedQuotes {
+  data: SavedQuote[]
+  total: number
+  page: number
+  limit: number
+  totalPages: number
+}
+
 const quotes = ref<SavedQuote[]>([])
 const isLoading = ref(false)
 const fetchError = ref<string | null>(null)
 
+const currentPage = ref(1)
+const totalPages = ref(1)
+const total = ref(0)
+const LIMIT = 20
+
+const hasPrev = computed(() => currentPage.value > 1)
+const hasNext = computed(() => currentPage.value < totalPages.value)
+
 // Which quote cards have their breakdown expanded
-const expandedIds = ref<Set<number>>(new Set())
+const expandedIds = ref<Set<string>>(new Set())
 
 // Lookup maps: product id → display name
-const trimSizeMap = ref<Map<number, string>>(new Map())
-const coverStyleMap = ref<Map<number, string>>(new Map())
-const coverFinishMap = ref<Map<number, string>>(new Map())
-const printTypeMap = ref<Map<number, string>>(new Map())
-const paperStockMap = ref<Map<number, string>>(new Map())
-const bindingTypeMap = ref<Map<number, string>>(new Map())
+const trimSizeMap = ref<Map<string, string>>(new Map())
+const coverStyleMap = ref<Map<string, string>>(new Map())
+const coverFinishMap = ref<Map<string, string>>(new Map())
+const printTypeMap = ref<Map<string, string>>(new Map())
+const paperStockMap = ref<Map<string, string>>(new Map())
+const bindingTypeMap = ref<Map<string, string>>(new Map())
 
-function buildMap(items: ProductOption[]): Map<number, string> {
+function buildMap(items: ProductOption[]): Map<string, string> {
   return new Map(items.map((item) => [item.id, item.name]))
 }
 
-function lookupName(map: Map<number, string>, id: number): string {
+function lookupName(map: Map<string, string>, id: string): string {
   return map.get(id) ?? `#${id}`
 }
 
-function toggleBreakdown(quoteId: number): void {
+function toggleBreakdown(quoteId: string): void {
   if (expandedIds.value.has(quoteId)) {
     expandedIds.value.delete(quoteId)
   } else {
@@ -107,17 +123,25 @@ async function loadProductLookups(): Promise<void> {
   }
 }
 
-async function loadQuotes(): Promise<void> {
+async function loadQuotes(page = currentPage.value): Promise<void> {
   isLoading.value = true
   fetchError.value = null
   try {
-    const { data } = await api.get<SavedQuote[]>('/quoter/quotes')
-    quotes.value = data
+    const { data } = await api.get<PaginatedQuotes>(`/quoter/quotes?page=${page}&limit=${LIMIT}`)
+    quotes.value = data.data
+    currentPage.value = data.page
+    totalPages.value = data.totalPages
+    total.value = data.total
   } catch {
     fetchError.value = 'Failed to load quotes. Please try again.'
   } finally {
     isLoading.value = false
   }
+}
+
+async function goToPage(page: number): Promise<void> {
+  if (page < 1 || page > totalPages.value) return
+  await loadQuotes(page)
 }
 
 function formatDate(isoString: string): string {
@@ -163,6 +187,13 @@ function configSummary(q: SavedQuote): string {
               {{ authStore.user?.name }}
             </a>
             <a
+              v-if="authStore.user?.role === 'admin'"
+              href="/admin"
+              class="text-sm font-medium text-indigo-600 hover:text-indigo-700 transition-colors"
+            >
+              Admin
+            </a>
+            <a
               href="/my-quotes"
               class="text-sm font-medium text-indigo-600 hover:text-indigo-700 transition-colors"
             >
@@ -182,14 +213,14 @@ function configSummary(q: SavedQuote): string {
     <!-- Page body -->
     <div class="py-10 px-4">
       <div class="max-w-4xl mx-auto">
-        <header class="mb-8 flex items-center justify-between">
+        <header class="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 class="text-3xl font-bold text-gray-900">My Quotes</h1>
             <p class="text-gray-500 mt-1">Your saved book printing quotes</p>
           </div>
           <a
             href="/"
-            class="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors text-sm"
+            class="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors text-sm self-start sm:self-auto"
           >
             &#8592; New Quote
           </a>
@@ -233,22 +264,22 @@ function configSummary(q: SavedQuote): string {
         </div>
 
         <!-- Quote list -->
-        <ul v-else class="space-y-4">
+        <ul v-else class="space-y-4" aria-label="quotes">
           <li
             v-for="quote in quotes"
             :key="quote.id"
             class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6"
           >
             <!-- Header row: ID + date + total -->
-            <div class="flex items-start justify-between flex-wrap gap-4 mb-3">
+            <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-3">
               <div>
                 <p class="text-xs font-semibold text-indigo-600 uppercase tracking-wide mb-1">
-                  Quote #{{ quote.id }}
+                  Quote #{{ quote.id.slice(0, 8) }}
                 </p>
                 <p class="text-2xl font-bold text-gray-900">{{ formatPrice(quote.totalPrice) }}</p>
                 <p class="text-sm text-gray-500 mt-0.5">{{ formatDate(quote.createdAt) }}</p>
               </div>
-              <div class="text-right">
+              <div class="sm:text-right">
                 <p class="text-sm font-medium text-gray-700">
                   {{ quote.pageCount }} pages &nbsp;&middot;&nbsp; Qty {{ quote.quantity }}
                 </p>
@@ -301,6 +332,32 @@ function configSummary(q: SavedQuote): string {
             </div>
           </li>
         </ul>
+
+        <!-- Pagination -->
+        <div
+          v-if="totalPages > 1"
+          class="flex items-center justify-between mt-6"
+        >
+          <span class="text-sm text-gray-500">Page {{ currentPage }} of {{ totalPages }} &middot; {{ total }} quotes</span>
+          <div class="flex gap-2">
+            <button
+              :disabled="!hasPrev"
+              class="px-4 py-2 text-sm font-medium rounded-lg border transition-colors"
+              :class="hasPrev ? 'border-gray-300 text-gray-700 hover:bg-gray-50' : 'border-gray-100 text-gray-300 cursor-not-allowed'"
+              @click="goToPage(currentPage - 1)"
+            >
+              Previous
+            </button>
+            <button
+              :disabled="!hasNext"
+              class="px-4 py-2 text-sm font-medium rounded-lg border transition-colors"
+              :class="hasNext ? 'border-gray-300 text-gray-700 hover:bg-gray-50' : 'border-gray-100 text-gray-300 cursor-not-allowed'"
+              @click="goToPage(currentPage + 1)"
+            >
+              Next
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </div>

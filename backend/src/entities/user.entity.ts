@@ -10,8 +10,8 @@ export enum UserRole {
 /** Represents a registered user who can save quotes */
 @Entity('users')
 export class User extends BaseAppEntity {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
   @Column({ length: 100 })
   name: string;

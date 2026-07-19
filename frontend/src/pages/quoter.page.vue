@@ -28,6 +28,13 @@ const showAuthModal = ref(false)
               {{ authStore.user?.name }}
             </a>
             <a
+              v-if="authStore.user?.role === 'admin'"
+              href="/admin"
+              class="text-sm font-medium text-indigo-600 hover:text-indigo-700 transition-colors"
+            >
+              Admin
+            </a>
+            <a
               href="/my-quotes"
               class="text-sm font-medium text-indigo-600 hover:text-indigo-700 transition-colors"
             >

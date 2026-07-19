@@ -27,39 +27,62 @@ const dataSource = new DataSource({
 async function seedPricing(): Promise<void> {
   await dataSource.initialize();
 
-  // page_rates: printType × paperStock
-  // printTypeId 1 = Black & White, 2 = Color
-  // paperStockId 1 = 60lb Natural, 2 = 70lb White, 3 = 80lb White
+  const printTypeRepo = dataSource.getRepository(PrintType);
+  const paperStockRepo = dataSource.getRepository(PaperStock);
+  const coverStyleRepo = dataSource.getRepository(CoverStyle);
+  const coverFinishRepo = dataSource.getRepository(CoverFinish);
+  const bindingTypeRepo = dataSource.getRepository(BindingType);
+
+  const [bw, color] = await Promise.all([
+    printTypeRepo.findOneByOrFail({ name: 'Black & White' }),
+    printTypeRepo.findOneByOrFail({ name: 'Color' }),
+  ]);
+  const [nat60, wh70, wh80] = await Promise.all([
+    paperStockRepo.findOneByOrFail({ name: '60lb Natural' }),
+    paperStockRepo.findOneByOrFail({ name: '70lb White' }),
+    paperStockRepo.findOneByOrFail({ name: '80lb White' }),
+  ]);
+  const [soft, hard, dust] = await Promise.all([
+    coverStyleRepo.findOneByOrFail({ name: 'Softcover' }),
+    coverStyleRepo.findOneByOrFail({ name: 'Hardcover' }),
+    coverStyleRepo.findOneByOrFail({ name: 'Dust Jacket' }),
+  ]);
+  const [gloss, matte, textured] = await Promise.all([
+    coverFinishRepo.findOneByOrFail({ name: 'Gloss' }),
+    coverFinishRepo.findOneByOrFail({ name: 'Matte' }),
+    coverFinishRepo.findOneByOrFail({ name: 'Textured' }),
+  ]);
+  const [perfect, saddle, spiral] = await Promise.all([
+    bindingTypeRepo.findOneByOrFail({ name: 'Perfect Bind' }),
+    bindingTypeRepo.findOneByOrFail({ name: 'Saddle Stitch' }),
+    bindingTypeRepo.findOneByOrFail({ name: 'Spiral' }),
+  ]);
+
   await dataSource.getRepository(PageRate).save([
-    { printType: { id: 1 }, paperStock: { id: 1 }, ratePerPage: 0.0350 },
-    { printType: { id: 1 }, paperStock: { id: 2 }, ratePerPage: 0.0400 },
-    { printType: { id: 1 }, paperStock: { id: 3 }, ratePerPage: 0.0450 },
-    { printType: { id: 2 }, paperStock: { id: 1 }, ratePerPage: 0.0850 },
-    { printType: { id: 2 }, paperStock: { id: 2 }, ratePerPage: 0.0950 },
-    { printType: { id: 2 }, paperStock: { id: 3 }, ratePerPage: 0.1050 },
+    { printType: bw,    paperStock: nat60, ratePerPage: 0.0350 },
+    { printType: bw,    paperStock: wh70,  ratePerPage: 0.0400 },
+    { printType: bw,    paperStock: wh80,  ratePerPage: 0.0450 },
+    { printType: color, paperStock: nat60, ratePerPage: 0.0850 },
+    { printType: color, paperStock: wh70,  ratePerPage: 0.0950 },
+    { printType: color, paperStock: wh80,  ratePerPage: 0.1050 },
   ]);
 
-  // cover_rates: coverStyle × coverFinish
-  // coverStyleId 1 = Softcover, 2 = Hardcover, 3 = Dust Jacket
-  // coverFinishId 1 = Gloss, 2 = Matte, 3 = Textured
   await dataSource.getRepository(CoverRate).save([
-    { coverStyle: { id: 1 }, coverFinish: { id: 1 }, basePrice: 3.50 },
-    { coverStyle: { id: 1 }, coverFinish: { id: 2 }, basePrice: 4.00 },
-    { coverStyle: { id: 1 }, coverFinish: { id: 3 }, basePrice: 4.75 },
-    { coverStyle: { id: 2 }, coverFinish: { id: 1 }, basePrice: 8.00 },
-    { coverStyle: { id: 2 }, coverFinish: { id: 2 }, basePrice: 8.50 },
-    { coverStyle: { id: 2 }, coverFinish: { id: 3 }, basePrice: 9.25 },
-    { coverStyle: { id: 3 }, coverFinish: { id: 1 }, basePrice: 10.00 },
-    { coverStyle: { id: 3 }, coverFinish: { id: 2 }, basePrice: 10.50 },
-    { coverStyle: { id: 3 }, coverFinish: { id: 3 }, basePrice: 11.25 },
+    { coverStyle: soft, coverFinish: gloss,    basePrice: 3.50 },
+    { coverStyle: soft, coverFinish: matte,    basePrice: 4.00 },
+    { coverStyle: soft, coverFinish: textured, basePrice: 4.75 },
+    { coverStyle: hard, coverFinish: gloss,    basePrice: 8.00 },
+    { coverStyle: hard, coverFinish: matte,    basePrice: 8.50 },
+    { coverStyle: hard, coverFinish: textured, basePrice: 9.25 },
+    { coverStyle: dust, coverFinish: gloss,    basePrice: 10.00 },
+    { coverStyle: dust, coverFinish: matte,    basePrice: 10.50 },
+    { coverStyle: dust, coverFinish: textured, basePrice: 11.25 },
   ]);
 
-  // binding_rates: bindingType
-  // bindingTypeId 1 = Perfect Bind, 2 = Saddle Stitch, 3 = Spiral
   await dataSource.getRepository(BindingRate).save([
-    { bindingType: { id: 1 }, surcharge: 1.50 },
-    { bindingType: { id: 2 }, surcharge: 0.75 },
-    { bindingType: { id: 3 }, surcharge: 2.00 },
+    { bindingType: perfect, surcharge: 1.50 },
+    { bindingType: saddle,  surcharge: 0.75 },
+    { bindingType: spiral,  surcharge: 2.00 },
   ]);
 
   console.warn('Pricing seed complete.');

@@ -2,12 +2,12 @@ import { defineStore } from 'pinia'
 import { reactive, ref } from 'vue'
 
 export interface QuoteState {
-  trimSizeId: number | null
-  coverStyleId: number | null
-  coverFinishId: number | null
-  printTypeId: number | null
-  paperStockId: number | null
-  bindingTypeId: number | null
+  trimSizeId: string | null
+  coverStyleId: string | null
+  coverFinishId: string | null
+  printTypeId: string | null
+  paperStockId: string | null
+  bindingTypeId: string | null
   pageCount: number | null
   quantity: number | null
 }

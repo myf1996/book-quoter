@@ -10,7 +10,7 @@ import { useAuthStore } from '@/stores/auth.store'
 import { api } from '@/utils/helpers.utils'
 
 interface UserProfile {
-  id: number
+  id: string
   name: string
   email: string
   createdAt: string
@@ -149,6 +149,13 @@ onMounted(async () => {
               class="text-sm text-indigo-600 font-medium hidden sm:inline hover:text-indigo-800 transition-colors"
             >
               {{ authStore.user?.name }}
+            </a>
+            <a
+              v-if="authStore.user?.role === 'admin'"
+              href="/admin"
+              class="text-sm font-medium text-indigo-600 hover:text-indigo-700 transition-colors"
+            >
+              Admin
             </a>
             <a
               href="/my-quotes"

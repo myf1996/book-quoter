@@ -7,8 +7,8 @@ import { CoverStyle } from './cover-style.entity';
 @Entity('cover_rates')
 @Unique(['coverStyle', 'coverFinish'])
 export class CoverRate extends BaseAppEntity {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
   @ManyToOne(() => CoverStyle, { onDelete: 'RESTRICT' })
   coverStyle: CoverStyle;

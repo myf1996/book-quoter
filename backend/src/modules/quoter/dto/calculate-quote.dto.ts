@@ -1,30 +1,24 @@
-import { IsNumber, IsPositive, Max, Min } from 'class-validator';
+import { IsNumber, IsUUID, Max, Min } from 'class-validator';
 
 /** DTO for the calculate price endpoint — validates all wizard selections */
 export class CalculateQuoteDto {
-  @IsNumber()
-  @IsPositive()
-  trimSizeId: number;
+  @IsUUID()
+  trimSizeId: string;
 
-  @IsNumber()
-  @IsPositive()
-  coverStyleId: number;
+  @IsUUID()
+  coverStyleId: string;
 
-  @IsNumber()
-  @IsPositive()
-  coverFinishId: number;
+  @IsUUID()
+  coverFinishId: string;
 
-  @IsNumber()
-  @IsPositive()
-  printTypeId: number;
+  @IsUUID()
+  printTypeId: string;
 
-  @IsNumber()
-  @IsPositive()
-  paperStockId: number;
+  @IsUUID()
+  paperStockId: string;
 
-  @IsNumber()
-  @IsPositive()
-  bindingTypeId: number;
+  @IsUUID()
+  bindingTypeId: string;
 
   @IsNumber()
   @Min(24)
