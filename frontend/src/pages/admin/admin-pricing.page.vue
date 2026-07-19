@@ -398,7 +398,7 @@ onMounted(async () => {
           </div>
           <div class="flex gap-2 mt-3">
             <button
-              :disabled="pageRateSaving || pageRateForm.printTypeId === 0 || pageRateForm.paperStockId === 0"
+              :disabled="pageRateSaving || pageRateForm.printTypeId === '' || pageRateForm.paperStockId === ''"
               class="px-4 py-1.5 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-60"
               @click="savePageRate"
             >
@@ -521,7 +521,7 @@ onMounted(async () => {
           </div>
           <div class="flex gap-2 mt-3">
             <button
-              :disabled="coverRateSaving || coverRateForm.coverStyleId === 0 || coverRateForm.coverFinishId === 0"
+              :disabled="coverRateSaving || coverRateForm.coverStyleId === '' || coverRateForm.coverFinishId === ''"
               class="px-4 py-1.5 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-60"
               @click="saveCoverRate"
             >
@@ -634,7 +634,7 @@ onMounted(async () => {
           </div>
           <div class="flex gap-2 mt-3">
             <button
-              :disabled="bindingRateSaving || bindingRateForm.bindingTypeId === 0"
+              :disabled="bindingRateSaving || bindingRateForm.bindingTypeId === ''"
               class="px-4 py-1.5 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-60"
               @click="saveBindingRate"
             >

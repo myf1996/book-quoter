@@ -1,4 +1,4 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity } from 'typeorm';
 import { BaseAppEntity } from './base-app.entity';
 
 /** Roles available in the system */
@@ -10,9 +10,6 @@ export enum UserRole {
 /** Represents a registered user who can save quotes */
 @Entity('users')
 export class User extends BaseAppEntity {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
-
   @Column({ length: 100 })
   name: string;
 

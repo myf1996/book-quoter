@@ -1,4 +1,4 @@
-import { Column, Entity, ManyToOne, PrimaryGeneratedColumn, Unique } from 'typeorm';
+import { Column, Entity, ManyToOne, Unique } from 'typeorm';
 import { BaseAppEntity } from './base-app.entity';
 import { CoverFinish } from './cover-finish.entity';
 import { CoverStyle } from './cover-style.entity';
@@ -7,9 +7,6 @@ import { CoverStyle } from './cover-style.entity';
 @Entity('cover_rates')
 @Unique(['coverStyle', 'coverFinish'])
 export class CoverRate extends BaseAppEntity {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
-
   @ManyToOne(() => CoverStyle, { onDelete: 'RESTRICT' })
   coverStyle: CoverStyle;
 

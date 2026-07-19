@@ -1,4 +1,4 @@
-import { Column, Entity, ManyToOne, PrimaryGeneratedColumn, Unique } from 'typeorm';
+import { Column, Entity, ManyToOne, Unique } from 'typeorm';
 import { BaseAppEntity } from './base-app.entity';
 import { BindingType } from './binding-type.entity';
 
@@ -6,9 +6,6 @@ import { BindingType } from './binding-type.entity';
 @Entity('binding_rates')
 @Unique(['bindingType'])
 export class BindingRate extends BaseAppEntity {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
-
   @ManyToOne(() => BindingType, { onDelete: 'RESTRICT' })
   bindingType: BindingType;
 

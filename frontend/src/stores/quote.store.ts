@@ -1,6 +1,12 @@
 import { defineStore } from 'pinia'
 import { reactive, ref } from 'vue'
 
+export interface AppliedCoupon {
+  code: string
+  discountType: 'fixed' | 'percentage'
+  discountValue: number
+}
+
 export interface QuoteState {
   trimSizeId: string | null
   coverStyleId: string | null
@@ -53,6 +59,13 @@ export const useQuoteStore = defineStore('quote', () => {
    */
   const pageCountBounds = reactive<PageCountBounds>({ minPages: 24, maxPages: 840 })
 
+  /** Coupon applied by the user in the summary sidebar; null if none */
+  const appliedCoupon = ref<AppliedCoupon | null>(null)
+
+  function setAppliedCoupon(coupon: AppliedCoupon | null): void {
+    appliedCoupon.value = coupon
+  }
+
   /** Updates one or more fields in the quote state */
   function updateQuoteState(updates: Partial<QuoteState>): void {
     Object.assign(quoteState, updates)
@@ -96,8 +109,10 @@ export const useQuoteStore = defineStore('quote', () => {
     currentStep,
     quoteState,
     pageCountBounds,
+    appliedCoupon,
     updateQuoteState,
     setPageCountBounds,
+    setAppliedCoupon,
     isCurrentStepComplete,
     goToNextStep,
     goToPreviousStep,

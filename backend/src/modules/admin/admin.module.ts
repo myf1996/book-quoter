@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { BindingRate } from '../../entities/binding-rate.entity';
 import { BindingType } from '../../entities/binding-type.entity';
+import { Coupon } from '../../entities/coupon.entity';
+import { CouponUsage } from '../../entities/coupon-usage.entity';
 import { CoverFinish } from '../../entities/cover-finish.entity';
 import { CoverRate } from '../../entities/cover-rate.entity';
 import { CoverStyle } from '../../entities/cover-style.entity';
@@ -29,6 +31,8 @@ import { AdminService } from './admin.service';
       BindingRate,
       User,
       Quote,
+      Coupon,
+      CouponUsage,
     ]),
   ],
   controllers: [AdminController],

@@ -7,7 +7,7 @@
 | Phase 1 | 7-step quoter wizard + product catalogue endpoints | Complete |
 | Phase 2 | Live pricing engine + rate tables + quote persistence | Complete |
 | Phase 3 | JWT authentication + user profiles + quote history + password reset | Complete |
-| Phase 4 | Admin panel (dashboard, product CRUD, pricing CRUD, user management, all-quotes view) | Complete |
+| Phase 4 | Admin panel (dashboard, product CRUD, pricing CRUD, user management, quotes view + detail, coupon CRUD) | Complete |
 
 ---
 
@@ -64,11 +64,13 @@ OnPress/
 │   │   └── use-quote-state.composable.ts  # Fetches product options, exposes isLoading/error/options
 │   ├── pages/
 │   │   ├── admin/
-│   │   │   ├── admin-dashboard.page.vue   # /admin — stats cards + recent quotes table
-│   │   │   ├── admin-products.page.vue    # /admin/products — 6-tab product CRUD
-│   │   │   ├── admin-pricing.page.vue     # /admin/pricing — page/cover/binding rate CRUD
-│   │   │   ├── admin-users.page.vue       # /admin/users — paginated user list + role management
-│   │   │   └── admin-quotes.page.vue      # /admin/quotes — paginated all-quotes read-only view
+│   │   │   ├── admin-dashboard.page.vue        # /admin — stats cards + recent quotes table
+│   │   │   ├── admin-products.page.vue         # /admin/products — 6-tab product CRUD
+│   │   │   ├── admin-pricing.page.vue          # /admin/pricing — page/cover/binding rate CRUD
+│   │   │   ├── admin-users.page.vue            # /admin/users — paginated user list + role management
+│   │   │   ├── admin-quotes.page.vue           # /admin/quotes — paginated all-quotes with user/coupon filters
+│   │   │   ├── admin-quote-detail.page.vue     # /admin/quotes/:id — full quote detail view
+│   │   │   └── admin-coupons.page.vue          # /admin/coupons — coupon CRUD with code/status filter
 │   │   ├── quoter.page.vue                # / — wizard page + top nav
 │   │   ├── my-quotes.page.vue             # /my-quotes — authenticated user's quote history
 │   │   ├── profile.page.vue               # /profile — edit name + change password
@@ -90,18 +92,21 @@ OnPress/
     │   │   └── roles.guard.ts             # Role-based access (admin only)
     │   └── decorators/
     │       └── roles.decorator.ts         # @Roles('admin') decorator
-    ├── entities/                          # All PKs are UUID (@PrimaryGeneratedColumn('uuid'))
-    │   ├── user.entity.ts                 # id, name, email, passwordHash, role, createdAt, deletedAt
-    │   ├── quote.entity.ts                # id, config (jsonb), pageCount, quantity, totalPrice, priceBreakdown (jsonb), user FK, createdAt, deletedAt
-    │   ├── trim-size.entity.ts            # id, name, width, height, minPages, maxPages, status, createdAt, deletedAt
-    │   ├── cover-style.entity.ts          # id, name, status, createdAt, deletedAt
-    │   ├── cover-finish.entity.ts         # id, name, status, createdAt, deletedAt
-    │   ├── print-type.entity.ts           # id, name, status, createdAt, deletedAt
-    │   ├── paper-stock.entity.ts          # id, name, weight, status, createdAt, deletedAt
-    │   ├── binding-type.entity.ts         # id, name, status, createdAt, deletedAt
-    │   ├── page-rate.entity.ts            # id, printType (FK), paperStock (FK), ratePerPage, createdAt, deletedAt
-    │   ├── cover-rate.entity.ts           # id, coverStyle (FK), coverFinish (FK), basePrice, createdAt, deletedAt
-    │   └── binding-rate.entity.ts         # id, bindingType (FK), surcharge, createdAt, deletedAt
+    ├── entities/                          # All extend BaseAppEntity (id, status, createdAt, updatedAt, deletedAt)
+    │   ├── base-app.entity.ts             # Abstract base: id (uuid PK), status, createdAt, updatedAt, deletedAt
+    │   ├── user.entity.ts                 # name, email, passwordHash, role + base columns
+    │   ├── quote.entity.ts                # 6 product ManyToOne FKs (NOT NULL, RESTRICT, eager), pageCount, quantity, totalPrice, priceBreakdown (jsonb), couponCode, discountAmount, user FK (nullable, RESTRICT)
+    │   ├── coupon.entity.ts               # code (unique), discountType, discountValue, applicableUser FK (nullable, RESTRICT), maxUsesPerUser, totalMaxUses, expiresAt
+    │   ├── coupon-usage.entity.ts         # coupon FK (RESTRICT), user FK (RESTRICT), quote FK nullable (RESTRICT); createdAt = usedAt
+    │   ├── trim-size.entity.ts            # name, width, height, minPages, maxPages + base columns
+    │   ├── cover-style.entity.ts          # name + base columns
+    │   ├── cover-finish.entity.ts         # name + base columns
+    │   ├── print-type.entity.ts           # name + base columns
+    │   ├── paper-stock.entity.ts          # name, weight + base columns
+    │   ├── binding-type.entity.ts         # name + base columns
+    │   ├── page-rate.entity.ts            # printType FK (RESTRICT), paperStock FK (RESTRICT), ratePerPage
+    │   ├── cover-rate.entity.ts           # coverStyle FK (RESTRICT), coverFinish FK (RESTRICT), basePrice
+    │   └── binding-rate.entity.ts         # bindingType FK (RESTRICT), surcharge
     ├── modules/
     │   ├── products/
     │   │   ├── products.controller.ts     # GET /api/products/* (no auth required)
@@ -121,9 +126,9 @@ OnPress/
     │   │       └── jwt.strategy.ts        # Passport JWT strategy
     │   └── admin/
     │       ├── admin.controller.ts        # All /admin/* routes (JWT + admin role guard)
-    │       ├── admin.service.ts           # getDashboardStats, product CRUD, rate CRUD, user management, getAllQuotes
+    │       ├── admin.service.ts           # getDashboardStats, product CRUD, rate CRUD, user management, getAllQuotes, coupon CRUD
     │       ├── admin.module.ts
-    │       └── dto/                       # Create/Update DTOs for all product types and rates
+    │       └── dto/                       # Create/Update DTOs for all product types, rates, and coupons
     ├── database/
     │   └── seeds/
     │       ├── seed.ts                    # Full seed: 6 product types (all ACTIVE) + 18 rate rows + admin user
@@ -149,6 +154,8 @@ OnPress/
 | `/admin/pricing` | `admin-pricing.page.vue` | Yes | admin |
 | `/admin/users` | `admin-users.page.vue` | Yes | admin |
 | `/admin/quotes` | `admin-quotes.page.vue` | Yes | admin |
+| `/admin/quotes/:id` | `admin-quote-detail.page.vue` | Yes | admin |
+| `/admin/coupons` | `admin-coupons.page.vue` | Yes | admin |
 
 All admin routes redirect to `/` if the user is unauthenticated or is not an admin (enforced in `onMounted`).
 
@@ -225,16 +232,10 @@ Browser (Finish button, no session)
 ```
 Browser (navigates to /my-quotes)
   → authStore.isAuthenticated check → redirect to / if false
-  → Parallel requests:
-      GET /api/products/trim-sizes
-      GET /api/products/cover-styles
-      GET /api/products/cover-finishes
-      GET /api/products/print-types
-      GET /api/products/paper-stocks
-      GET /api/products/binding-types
-      GET /api/quoter/quotes?page=1&limit=20  (JWT required)
-  → Product option arrays build lookup Maps (id → name)
-  → Quotes rendered as cards; config IDs resolved to display names
+  → GET /api/quoter/quotes?page=1&limit=20  (JWT required)
+  → Quote objects include product name objects directly (trimSize.name, coverStyle.name, etc.)
+     — no secondary lookup calls needed
+  → Quotes rendered as cards with configSummary built from relation objects
   → Pagination controls shown when totalPages > 1
 ```
 
@@ -360,9 +361,15 @@ On app boot (`main.ts`), `authStore.fetchCurrentUser()` is called before the rou
 
 ## Key Design Decisions
 
-**UUID primary keys** — All 11 entities use `@PrimaryGeneratedColumn('uuid')`. UUIDs make IDs safe to expose publicly, support distributed generation without coordination, and prevent ID enumeration.
+**UUID primary keys** — All 13 entities inherit `@PrimaryGeneratedColumn('uuid')` from `BaseAppEntity`. UUIDs make IDs safe to expose publicly, support distributed generation without coordination, and prevent ID enumeration.
 
-**ProductStatus enum** — All 6 product option entities carry a `status: ProductStatus` column (`active` | `inactive`). The public `/products/*` endpoints filter to `active` only. Admins see and manage all records. New products default to `inactive` so they can be prepared before going live.
+**`BaseAppEntity` centralization** — Every entity extends a single abstract base class that provides `id`, `status`, `createdAt`, `updatedAt`, and `deletedAt`. This eliminates per-entity decorator boilerplate and ensures all tables have a consistent set of audit columns.
+
+**ProductStatus enum on all entities** — `BaseAppEntity` injects a `status: ProductStatus` column (`active` | `inactive`) on every table. For product option entities the value drives visibility in the customer wizard. For other entities (quotes, coupons, coupon_usages) it is inherited but reserved for future business logic.
+
+**Quote FK relations instead of JSONB config** — The `Quote` entity has 6 proper TypeORM `ManyToOne` relations (NOT NULL, `eager: true`, `onDelete: RESTRICT`) pointing to the 6 product tables. Eager loading means product names are always included in responses without extra joins or client-side lookup maps — the API returns `{ trimSize: { id, name }, ... }` directly.
+
+**`onDelete: RESTRICT` on all ManyToOne relations** — Every foreign key in every entity uses `RESTRICT`. PostgreSQL will block deletion of any referenced record. This is the safest default: it forces explicit cleanup before deletion rather than silently nullifying or cascading.
 
 **Soft deletes** — `BaseAppEntity` provides `@DeleteDateColumn() deletedAt`. All deletes are soft: the record remains in the database with a timestamp but is excluded from all queries (TypeORM `SoftRemove` / `softDelete` + `withDeleted: false` by default).
 
@@ -372,7 +379,7 @@ On app boot (`main.ts`), `authStore.fetchCurrentUser()` is called before the rou
 
 **DTO validation** — `class-validator` decorators on every DTO, applied globally via `ValidationPipe`. All validation errors return `400 Bad Request` before any business logic runs.
 
-**`PaginatedResponse<T>` generic** — Consistent pagination shape across all three paginated endpoints. The `paginate<T>()` private helper in `AdminService` keeps this DRY.
+**`PaginatedResponse<T>` generic** — Consistent pagination shape across all paginated endpoints. The `paginate<T>()` private helper in `AdminService` keeps this DRY.
 
 **Live pricing is non-destructive** — `POST /api/quoter/calculate-price` never writes to the database. Only `POST /api/quoter/quote` persists. This makes it safe to call the calculate endpoint on every wizard state change.
 

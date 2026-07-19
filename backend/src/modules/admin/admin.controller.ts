@@ -26,7 +26,9 @@ import { PaperStock } from '../../entities/paper-stock.entity';
 import { PrintType } from '../../entities/print-type.entity';
 import { Quote } from '../../entities/quote.entity';
 import { TrimSize } from '../../entities/trim-size.entity';
-import { AdminService, DashboardStats, PaginatedResponse, UserView } from './admin.service';
+import { AdminService, CouponWithStats, CouponUsageView, DashboardStats, PaginatedResponse, QuoteDetailView, UserView } from './admin.service';
+import { CreateCouponDto } from './dto/create-coupon.dto';
+import { UpdateCouponDto } from './dto/update-coupon.dto';
 import { CreateBindingRateDto } from './dto/create-binding-rate.dto';
 import { CreateCoverRateDto } from './dto/create-cover-rate.dto';
 import { CreatePageRateDto } from './dto/create-page-rate.dto';
@@ -354,12 +356,62 @@ export class AdminController {
 
   // ─── Quotes ──────────────────────────────────────────────────────────────────
 
-  /** GET /api/admin/quotes?page=1&limit=20 */
+  /** GET /api/admin/quotes?page=1&limit=20&userSearch=john&couponCode=SAVE10 */
   @Get('quotes')
   getQuotes(
     @Query('page', new ParseIntPipe({ optional: true })) page?: number,
     @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
+    @Query('userSearch') userSearch?: string,
+    @Query('couponCode') couponCode?: string,
   ): Promise<PaginatedResponse<Quote>> {
-    return this.adminService.getAllQuotes(page, limit);
+    return this.adminService.getAllQuotes(page, limit, userSearch, couponCode);
+  }
+
+  /** GET /api/admin/quotes/:id — full resolved detail for a single quote */
+  @Get('quotes/:id')
+  getQuoteDetail(@Param('id') id: string): Promise<QuoteDetailView> {
+    return this.adminService.getQuoteDetail(id);
+  }
+
+  // ─── Coupons ─────────────────────────────────────────────────────────────────
+
+  /** GET /api/admin/coupons */
+  @Get('coupons')
+  getCoupons(): Promise<CouponWithStats[]> {
+    return this.adminService.getAllCoupons();
+  }
+
+  /** POST /api/admin/coupons */
+  @Post('coupons')
+  createCoupon(@Body() dto: CreateCouponDto): Promise<CouponWithStats> {
+    return this.adminService.createCoupon(dto) as Promise<CouponWithStats>;
+  }
+
+  /** PATCH /api/admin/coupons/:id */
+  @Patch('coupons/:id')
+  updateCoupon(
+    @Param('id') id: string,
+    @Body() dto: UpdateCouponDto,
+  ): Promise<CouponWithStats> {
+    return this.adminService.updateCoupon(id, dto) as Promise<CouponWithStats>;
+  }
+
+  /** DELETE /api/admin/coupons/:id */
+  @Delete('coupons/:id')
+  @HttpCode(204)
+  deleteCoupon(@Param('id') id: string): Promise<void> {
+    return this.adminService.deleteCoupon(id);
+  }
+
+  /** GET /api/admin/users/:id/coupon-usage */
+  @Get('users/:id/coupon-usage')
+  getUserCouponUsage(@Param('id') id: string): Promise<CouponUsageView[]> {
+    return this.adminService.getUserCouponUsage(id);
+  }
+
+  /** GET /api/admin/coupons/:id/quotes — quotes that used this coupon */
+  @Get('coupons/:id/quotes')
+  getCouponQuotes(@Param('id') id: string): Promise<Quote[]> {
+    return this.adminService.getCouponQuotes(id);
   }
 }

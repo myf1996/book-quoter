@@ -91,6 +91,49 @@ function formatDate(isoString: string): string {
   })
 }
 
+// ─── Coupon history modal ────────────────────────────────────────────────────
+
+interface CouponUsageRecord {
+  couponCode: string
+  discountType: 'fixed' | 'percentage'
+  discountValue: number
+  discountAmount: number | null
+  usedAt: string
+  quoteId: string | null
+}
+
+interface CouponHistoryModal {
+  user: AdminUser
+  usages: CouponUsageRecord[]
+}
+
+const couponModal = ref<CouponHistoryModal | null>(null)
+const couponLoading = ref(false)
+
+async function viewCouponHistory(user: AdminUser): Promise<void> {
+  couponLoading.value = true
+  couponModal.value = { user, usages: [] }
+  try {
+    const { data } = await api.get<CouponUsageRecord[]>(`/admin/users/${user.id}/coupon-usage`)
+    couponModal.value = { user, usages: data }
+  } catch {
+    couponModal.value = null
+    mutateError.value = 'Failed to load coupon history.'
+  } finally {
+    couponLoading.value = false
+  }
+}
+
+function formatPrice(value: number): string {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value)
+}
+
+function discountLabel(usage: CouponUsageRecord): string {
+  return usage.discountType === 'percentage'
+    ? `${usage.discountValue}%`
+    : formatPrice(usage.discountValue)
+}
+
 onMounted(async () => {
   if (!authStore.isAuthenticated || authStore.user?.role !== 'admin') {
     router.push({ path: '/' })
@@ -169,6 +212,12 @@ onMounted(async () => {
                 <td class="px-6 py-3 text-right">
                   <div class="flex items-center justify-end gap-2">
                     <button
+                      class="px-3 py-1 text-xs font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                      @click="viewCouponHistory(user)"
+                    >
+                      Coupons
+                    </button>
+                    <button
                       class="px-3 py-1 text-xs font-medium text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors whitespace-nowrap"
                       @click="toggleRole(user)"
                     >
@@ -217,4 +266,61 @@ onMounted(async () => {
       </div>
     </div>
   </AdminLayout>
+
+  <!-- Coupon history modal -->
+  <Teleport to="body">
+    <div v-if="couponModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div class="absolute inset-0 bg-black/50" @click="couponModal = null" />
+      <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-xl max-h-[80vh] flex flex-col">
+        <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+          <div>
+            <h2 class="text-base font-semibold text-gray-900">Coupon History</h2>
+            <p class="text-xs text-gray-400 mt-0.5">{{ couponModal.user.name }} · {{ couponModal.user.email }}</p>
+          </div>
+          <button
+            class="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
+            @click="couponModal = null"
+          >
+            <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="overflow-y-auto flex-1">
+          <div v-if="couponLoading" class="flex justify-center py-10">
+            <svg class="animate-spin h-7 w-7 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+          </div>
+          <div v-else-if="couponModal.usages.length === 0" class="px-6 py-10 text-center text-sm text-gray-400">
+            This user hasn't used any coupons yet.
+          </div>
+          <div v-else>
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-100">
+                  <th class="px-6 py-3">Code</th>
+                  <th class="px-6 py-3">Discount</th>
+                  <th class="px-6 py-3 text-right">Saved</th>
+                  <th class="px-6 py-3 text-right">Used On</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-50">
+                <tr v-for="u in couponModal.usages" :key="u.quoteId ?? u.usedAt" class="hover:bg-gray-50">
+                  <td class="px-6 py-3 font-mono font-semibold text-indigo-700">{{ u.couponCode }}</td>
+                  <td class="px-6 py-3 text-gray-700">{{ discountLabel(u) }}</td>
+                  <td class="px-6 py-3 text-right text-green-600 font-medium">
+                    {{ u.discountAmount ? `−${formatPrice(u.discountAmount)}` : '—' }}
+                  </td>
+                  <td class="px-6 py-3 text-right text-gray-500">{{ formatDate(u.usedAt) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </Teleport>
 </template>

@@ -1,16 +1,30 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { BindingRate } from '../../entities/binding-rate.entity';
+import { BindingType } from '../../entities/binding-type.entity';
+import { ProductStatus } from '../../common/enums/product-status.enum';
+import { Coupon, DiscountType } from '../../entities/coupon.entity';
+import { CouponUsage } from '../../entities/coupon-usage.entity';
+import { CoverFinish } from '../../entities/cover-finish.entity';
 import { CoverRate } from '../../entities/cover-rate.entity';
+import { CoverStyle } from '../../entities/cover-style.entity';
 import { PageRate } from '../../entities/page-rate.entity';
+import { PaperStock } from '../../entities/paper-stock.entity';
+import { PrintType } from '../../entities/print-type.entity';
 import { PriceBreakdown, Quote } from '../../entities/quote.entity';
+import { TrimSize } from '../../entities/trim-size.entity';
 import { User } from '../../entities/user.entity';
 import { CalculateQuoteDto } from './dto/calculate-quote.dto';
 
+export interface CouponValidationResult {
+  code: string;
+  discountType: DiscountType;
+  discountValue: number;
+}
+
 /**
- * Handles all pricing calculations for the quote wizard.
- * Looks up rates from the database and applies the pricing formula.
+ * Handles all pricing calculations and quote persistence for the wizard.
  */
 @Injectable()
 export class QuoterService {
@@ -19,6 +33,8 @@ export class QuoterService {
     @InjectRepository(CoverRate) private coverRateRepo: Repository<CoverRate>,
     @InjectRepository(BindingRate) private bindingRateRepo: Repository<BindingRate>,
     @InjectRepository(Quote) private quoteRepo: Repository<Quote>,
+    @InjectRepository(Coupon) private couponRepo: Repository<Coupon>,
+    @InjectRepository(CouponUsage) private couponUsageRepo: Repository<CouponUsage>,
   ) {}
 
   /**
@@ -70,31 +86,115 @@ export class QuoterService {
   }
 
   /**
+   * Validates a coupon code for the given authenticated user.
+   * Does not record usage — usage is recorded when the quote is saved.
+   *
+   * @param code - Raw coupon code (case-insensitive)
+   * @param userId - ID of the user attempting to apply the coupon
+   * @throws BadRequestException for any invalid/ineligible coupon
+   */
+  async validateCoupon(code: string, userId: string): Promise<CouponValidationResult> {
+    const coupon = await this.couponRepo.findOne({
+      where: { code: code.toUpperCase().trim(), status: ProductStatus.ACTIVE },
+      relations: ['applicableUser'],
+    });
+
+    if (!coupon) {
+      throw new BadRequestException('Coupon code not found or inactive.');
+    }
+
+    if (coupon.expiresAt && coupon.expiresAt < new Date()) {
+      throw new BadRequestException('This coupon has expired.');
+    }
+
+    if (coupon.applicableUser && coupon.applicableUser.id !== userId) {
+      throw new BadRequestException('This coupon is not applicable to your account.');
+    }
+
+    if (coupon.totalMaxUses !== null) {
+      const totalUsed = await this.couponUsageRepo.count({
+        where: { coupon: { id: coupon.id } },
+      });
+      if (totalUsed >= coupon.totalMaxUses) {
+        throw new BadRequestException('This coupon has reached its maximum number of uses.');
+      }
+    }
+
+    const userUsed = await this.couponUsageRepo.count({
+      where: { coupon: { id: coupon.id }, user: { id: userId } },
+    });
+    if (userUsed >= coupon.maxUsesPerUser) {
+      throw new BadRequestException('You have already used this coupon the maximum number of times.');
+    }
+
+    return {
+      code: coupon.code,
+      discountType: coupon.discountType,
+      discountValue: Number(coupon.discountValue),
+    };
+  }
+
+  /**
    * Calculates price and persists the quote to the database.
-   * @param dto - Validated quote configuration from the wizard
+   * If a couponCode is provided it is re-validated and usage is recorded.
+   *
+   * @param dto - Validated quote configuration (may include optional couponCode)
    * @param userId - ID of the authenticated user saving the quote
-   * @returns The saved Quote entity with all fields populated
    */
   async saveQuote(dto: CalculateQuoteDto, userId: string): Promise<Quote> {
     const breakdown = await this.calculatePrice(dto);
 
+    let couponCode: string | null = null;
+    let discountAmount: number | null = null;
+    let finalTotal = breakdown.total;
+
+    if (dto.couponCode?.trim()) {
+      const coupon = await this.validateCoupon(dto.couponCode, userId);
+      couponCode = coupon.code;
+
+      if (coupon.discountType === DiscountType.PERCENTAGE) {
+        discountAmount = Math.round((breakdown.total * coupon.discountValue) / 100 * 100) / 100;
+      } else {
+        discountAmount = Math.min(coupon.discountValue, breakdown.total);
+        discountAmount = Math.round(discountAmount * 100) / 100;
+      }
+
+      finalTotal = Math.round((breakdown.total - discountAmount) * 100) / 100;
+    }
+
     const quote = this.quoteRepo.create({
-      config: {
-        trimSizeId: dto.trimSizeId,
-        coverStyleId: dto.coverStyleId,
-        coverFinishId: dto.coverFinishId,
-        printTypeId: dto.printTypeId,
-        paperStockId: dto.paperStockId,
-        bindingTypeId: dto.bindingTypeId,
-      },
+      trimSize: { id: dto.trimSizeId } as TrimSize,
+      coverStyle: { id: dto.coverStyleId } as CoverStyle,
+      coverFinish: { id: dto.coverFinishId } as CoverFinish,
+      printType: { id: dto.printTypeId } as PrintType,
+      paperStock: { id: dto.paperStockId } as PaperStock,
+      bindingType: { id: dto.bindingTypeId } as BindingType,
       pageCount: dto.pageCount,
       quantity: dto.quantity,
-      totalPrice: breakdown.total,
+      totalPrice: finalTotal,
       priceBreakdown: breakdown,
+      couponCode,
+      discountAmount,
       user: { id: userId } as User,
     });
 
-    return this.quoteRepo.save(quote);
+    const saved = await this.quoteRepo.save(quote);
+
+    // Record coupon usage after successful save
+    if (couponCode) {
+      const couponEntity = await this.couponRepo.findOneBy({ code: couponCode });
+      if (couponEntity) {
+        await this.couponUsageRepo.save(
+          this.couponUsageRepo.create({
+            coupon: couponEntity,
+            user: { id: userId } as User,
+            quote: saved,
+          }),
+        );
+      }
+    }
+
+    return saved;
   }
 
   /**
@@ -110,6 +210,7 @@ export class QuoterService {
   ): Promise<{ data: Quote[]; total: number; page: number; limit: number; totalPages: number }> {
     const [data, total] = await this.quoteRepo.findAndCount({
       where: { user: { id: userId } },
+      relations: ['trimSize', 'coverStyle', 'coverFinish', 'printType', 'paperStock', 'bindingType'],
       order: { createdAt: 'DESC' },
       skip: (page - 1) * limit,
       take: limit,

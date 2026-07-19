@@ -66,10 +66,13 @@ async function saveQuote(): Promise<void> {
   isSavingQuote.value = true
   saveError.value = null
   try {
-    const { data } = await api.post<SavedQuoteResponse>('/quoter/quote', {
-      ...quoteStore.quoteState,
-    })
+    const body: Record<string, unknown> = { ...quoteStore.quoteState }
+    if (quoteStore.appliedCoupon) {
+      body.couponCode = quoteStore.appliedCoupon.code
+    }
+    const { data } = await api.post<SavedQuoteResponse>('/quoter/quote', body)
     savedQuoteId.value = data.id
+    quoteStore.setAppliedCoupon(null)
   } catch {
     saveError.value = 'Failed to save quote. Please try again.'
   } finally {

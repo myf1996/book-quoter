@@ -335,21 +335,21 @@ Calculates the price **and saves the quote** to the database, associated with th
 
 **Request body:** Same `CalculateQuoteDto` as `/calculate-price`.
 
-**Response:** Saved `Quote` entity
+**Response:** Saved `Quote` entity — product options are returned as full objects (id + name), not raw IDs.
 ```json
 {
   "id": "d4e5f6a7-b8c9-0d1e-2f3a-4b5c6d7e8f9a",
-  "config": {
-    "trimSizeId": "a3f2c1d0-...",
-    "coverStyleId": "...",
-    "coverFinishId": "...",
-    "printTypeId": "...",
-    "paperStockId": "...",
-    "bindingTypeId": "..."
-  },
+  "trimSize": { "id": "a3f2c1d0-...", "name": "Trade 6×9" },
+  "coverStyle": { "id": "...", "name": "Softcover" },
+  "coverFinish": { "id": "...", "name": "Gloss" },
+  "printType": { "id": "...", "name": "Black & White" },
+  "paperStock": { "id": "...", "name": "60lb Natural" },
+  "bindingType": { "id": "...", "name": "Perfect Bind" },
   "pageCount": 200,
   "quantity": 100,
   "totalPrice": "1296.00",
+  "couponCode": null,
+  "discountAmount": null,
   "priceBreakdown": {
     "pageCost": 7.00,
     "coverCost": 3.50,
@@ -388,10 +388,17 @@ Returns the authenticated user's saved quotes, paginated and ordered newest firs
   "data": [
     {
       "id": "d4e5f6a7-...",
-      "config": { "trimSizeId": "...", ... },
+      "trimSize": { "id": "...", "name": "Trade 6×9" },
+      "coverStyle": { "id": "...", "name": "Softcover" },
+      "coverFinish": { "id": "...", "name": "Gloss" },
+      "printType": { "id": "...", "name": "Black & White" },
+      "paperStock": { "id": "...", "name": "60lb Natural" },
+      "bindingType": { "id": "...", "name": "Perfect Bind" },
       "pageCount": 200,
       "quantity": 100,
       "totalPrice": "1296.00",
+      "couponCode": null,
+      "discountAmount": null,
       "priceBreakdown": { "pageCost": 7.00, "coverCost": 3.50, "bindingCost": 1.50, "subtotal": 1200.00, "tax": 96.00, "total": 1296.00 },
       "createdAt": "2026-07-19T00:00:00.000Z"
     }
@@ -720,10 +727,12 @@ Returns all quotes in the system, paginated and ordered newest first. Includes t
 
 **Query params:**
 
-| Param | Type | Default |
-|-------|------|---------|
-| `page` | `number` | `1` |
-| `limit` | `number` | `20` |
+| Param | Type | Default | Notes |
+|-------|------|---------|-------|
+| `page` | `number` | `1` | |
+| `limit` | `number` | `20` | |
+| `userSearch` | `string` | — | Filter by user name or email (partial, case-insensitive) |
+| `couponCode` | `string` | — | Filter to quotes that used a specific coupon code |
 
 **Response:** `PaginatedResponse<Quote>`
 ```json
@@ -731,10 +740,17 @@ Returns all quotes in the system, paginated and ordered newest first. Includes t
   "data": [
     {
       "id": "d4e5f6a7-...",
-      "config": { "trimSizeId": "...", "coverStyleId": "...", "coverFinishId": "...", "printTypeId": "...", "paperStockId": "...", "bindingTypeId": "..." },
+      "trimSize": { "id": "...", "name": "Trade 6×9" },
+      "coverStyle": { "id": "...", "name": "Softcover" },
+      "coverFinish": { "id": "...", "name": "Gloss" },
+      "printType": { "id": "...", "name": "Black & White" },
+      "paperStock": { "id": "...", "name": "60lb Natural" },
+      "bindingType": { "id": "...", "name": "Perfect Bind" },
       "pageCount": 200,
       "quantity": 100,
       "totalPrice": "1296.00",
+      "couponCode": null,
+      "discountAmount": null,
       "priceBreakdown": { "pageCost": 7.00, "coverCost": 3.50, "bindingCost": 1.50, "subtotal": 1200.00, "tax": 96.00, "total": 1296.00 },
       "createdAt": "2026-07-19T00:00:00.000Z",
       "user": {
@@ -750,3 +766,136 @@ Returns all quotes in the system, paginated and ordered newest first. Includes t
   "totalPages": 3
 }
 ```
+
+---
+
+#### GET /api/admin/quotes/:id
+
+Returns the full detail view for a single quote including all resolved relations and coupon usage history.
+
+**Response:** `QuoteDetailView`
+```json
+{
+  "id": "d4e5f6a7-...",
+  "trimSize": { "id": "...", "name": "Trade 6×9" },
+  "coverStyle": { "id": "...", "name": "Softcover" },
+  "coverFinish": { "id": "...", "name": "Gloss" },
+  "printType": { "id": "...", "name": "Black & White" },
+  "paperStock": { "id": "...", "name": "60lb Natural" },
+  "bindingType": { "id": "...", "name": "Perfect Bind" },
+  "pageCount": 200,
+  "quantity": 100,
+  "totalPrice": "1296.00",
+  "couponCode": "SAVE10",
+  "discountAmount": "129.60",
+  "priceBreakdown": { "pageCost": 7.00, "coverCost": 3.50, "bindingCost": 1.50, "subtotal": 1200.00, "tax": 96.00, "total": 1296.00 },
+  "createdAt": "2026-07-19T00:00:00.000Z",
+  "user": { "id": "550e8400-...", "name": "Jane Smith", "email": "jane@example.com" }
+}
+```
+
+**Errors:**
+- `404 Not Found` — quote does not exist
+
+---
+
+### Coupon Management
+
+#### GET /api/admin/coupons
+
+Returns all coupons with usage statistics.
+
+**Response:** `CouponWithStats[]`
+```json
+[
+  {
+    "id": "...",
+    "code": "SAVE10",
+    "discountType": "percentage",
+    "discountValue": "10.00",
+    "maxUsesPerUser": 1,
+    "totalMaxUses": null,
+    "expiresAt": null,
+    "status": "active",
+    "applicableUser": null,
+    "usageCount": 3,
+    "createdAt": "2026-07-01T00:00:00.000Z"
+  }
+]
+```
+
+---
+
+#### POST /api/admin/coupons
+
+Creates a new coupon.
+
+**Request body:**
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `code` | `string` | Required; stored uppercase; must be unique |
+| `discountType` | `"fixed"` or `"percentage"` | Required |
+| `discountValue` | `number` | Required |
+| `isActive` | `boolean` | Optional; maps to `status: active/inactive`; default `true` |
+| `maxUsesPerUser` | `number` | Optional; default `1` |
+| `totalMaxUses` | `number \| null` | Optional; null = unlimited |
+| `expiresAt` | `string` (ISO date) | Optional; null = never expires |
+| `applicableUserId` | `string` (UUID) | Optional; null = available to all users |
+
+**Response:** Created `CouponWithStats`.
+
+**Errors:**
+- `400 Bad Request` — validation failure or duplicate code
+- `409 Conflict` — coupon code already exists
+
+---
+
+#### PATCH /api/admin/coupons/:id
+
+Updates a coupon. Send only the fields to change.
+
+**Request body:** Same fields as POST (all optional).
+
+**Response:** Updated `CouponWithStats`.
+
+**Errors:**
+- `404 Not Found` — coupon does not exist
+
+---
+
+#### DELETE /api/admin/coupons/:id
+
+Soft-deletes the coupon.
+
+**Response:** `204 No Content`
+
+**Errors:**
+- `404 Not Found` — coupon does not exist
+
+---
+
+#### GET /api/admin/users/:id/coupon-usage
+
+Returns the coupon redemption history for a specific user.
+
+**Response:** `CouponUsageView[]`
+```json
+[
+  {
+    "couponCode": "SAVE10",
+    "discountType": "percentage",
+    "discountValue": "10.00",
+    "quoteId": "d4e5f6a7-...",
+    "usedAt": "2026-07-15T10:23:00.000Z"
+  }
+]
+```
+
+---
+
+#### GET /api/admin/coupons/:id/quotes
+
+Returns all quotes that used a specific coupon.
+
+**Response:** `Quote[]` — same shape as individual quote objects in `GET /api/admin/quotes`.

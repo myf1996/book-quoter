@@ -1,4 +1,4 @@
-import { IsNumber, IsUUID, Max, Min } from 'class-validator';
+import { IsNumber, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
 
 /** DTO for the calculate price endpoint — validates all wizard selections */
 export class CalculateQuoteDto {
@@ -28,4 +28,9 @@ export class CalculateQuoteDto {
   @IsNumber()
   @Min(1)
   quantity: number;
+
+  /** Optional coupon code to apply when saving a quote */
+  @IsOptional()
+  @IsString()
+  couponCode?: string;
 }

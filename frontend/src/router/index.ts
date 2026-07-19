@@ -58,6 +58,18 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/pages/admin/admin-quotes.page.vue'),
     meta: { requiresAuth: true, requiresAdmin: true },
   },
+  {
+    path: '/admin/quotes/:id',
+    name: 'admin-quote-detail',
+    component: () => import('@/pages/admin/admin-quote-detail.page.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true },
+  },
+  {
+    path: '/admin/coupons',
+    name: 'admin-coupons',
+    component: () => import('@/pages/admin/admin-coupons.page.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true },
+  },
 ]
 
 export const router = createRouter({

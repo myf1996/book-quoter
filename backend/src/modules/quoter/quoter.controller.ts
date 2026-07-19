@@ -3,7 +3,8 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AuthenticatedUser } from '../auth/strategies/jwt.strategy';
 import { PriceBreakdown, Quote } from '../../entities/quote.entity';
 import { CalculateQuoteDto } from './dto/calculate-quote.dto';
-import { QuoterService } from './quoter.service';
+import { ValidateCouponDto } from './dto/validate-coupon.dto';
+import { CouponValidationResult, QuoterService } from './quoter.service';
 
 /** Typed request with the authenticated user attached by JwtAuthGuard */
 interface AuthRequest {
@@ -28,10 +29,24 @@ export class QuoterController {
   }
 
   /**
+   * POST /api/quoter/validate-coupon
+   * Validates a coupon code for the authenticated user.
+   * Returns coupon type + value if valid; throws 400 if invalid/expired/ineligible.
+   */
+  @Post('validate-coupon')
+  @UseGuards(JwtAuthGuard)
+  validateCoupon(
+    @Body() dto: ValidateCouponDto,
+    @Request() req: AuthRequest,
+  ): Promise<CouponValidationResult> {
+    return this.quoterService.validateCoupon(dto.code, req.user.id);
+  }
+
+  /**
    * POST /api/quoter/quote
    * Calculates price and saves the quote to the database.
+   * Optionally applies a coupon (couponCode field in body).
    * Requires a valid JWT Bearer token.
-   * Returns the saved Quote with the authenticated user's ID attached.
    */
   @Post('quote')
   @UseGuards(JwtAuthGuard)
@@ -42,7 +57,6 @@ export class QuoterController {
   /**
    * GET /api/quoter/quotes?page=1&limit=20
    * Returns a paginated list of quotes saved by the authenticated user, newest first.
-   * Requires a valid JWT Bearer token.
    */
   @Get('quotes')
   @UseGuards(JwtAuthGuard)

@@ -1,22 +1,12 @@
 <script setup lang="ts">
 /**
  * MyQuotesPage — lists all saved quotes for the authenticated user.
- * Fetches product lookups in parallel so IDs are shown as real names.
  * Redirects to the quoter if unauthenticated.
  */
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.store'
 import { api } from '@/utils/helpers.utils'
-
-interface QuoteConfig {
-  trimSizeId: string
-  coverStyleId: string
-  coverFinishId: string
-  printTypeId: string
-  paperStockId: string
-  bindingTypeId: string
-}
 
 interface PriceBreakdown {
   pageCost: number
@@ -29,18 +19,19 @@ interface PriceBreakdown {
 
 interface SavedQuote {
   id: string
-  config: QuoteConfig
+  trimSize: { id: string; name: string } | null
+  coverStyle: { id: string; name: string } | null
+  coverFinish: { id: string; name: string } | null
+  printType: { id: string; name: string } | null
+  paperStock: { id: string; name: string } | null
+  bindingType: { id: string; name: string } | null
   pageCount: number
   quantity: number
   totalPrice: number
   createdAt: string
   priceBreakdown?: PriceBreakdown
-}
-
-/** A product option returned by any /products/* endpoint */
-interface ProductOption {
-  id: string
-  name: string
+  couponCode?: string | null
+  discountAmount?: number | null
 }
 
 const router = useRouter()
@@ -69,22 +60,6 @@ const hasNext = computed(() => currentPage.value < totalPages.value)
 // Which quote cards have their breakdown expanded
 const expandedIds = ref<Set<string>>(new Set())
 
-// Lookup maps: product id → display name
-const trimSizeMap = ref<Map<string, string>>(new Map())
-const coverStyleMap = ref<Map<string, string>>(new Map())
-const coverFinishMap = ref<Map<string, string>>(new Map())
-const printTypeMap = ref<Map<string, string>>(new Map())
-const paperStockMap = ref<Map<string, string>>(new Map())
-const bindingTypeMap = ref<Map<string, string>>(new Map())
-
-function buildMap(items: ProductOption[]): Map<string, string> {
-  return new Map(items.map((item) => [item.id, item.name]))
-}
-
-function lookupName(map: Map<string, string>, id: string): string {
-  return map.get(id) ?? `#${id}`
-}
-
 function toggleBreakdown(quoteId: string): void {
   if (expandedIds.value.has(quoteId)) {
     expandedIds.value.delete(quoteId)
@@ -98,30 +73,8 @@ onMounted(async () => {
     router.push({ name: 'quoter' })
     return
   }
-  await Promise.all([loadProductLookups(), loadQuotes()])
+  await loadQuotes()
 })
-
-async function loadProductLookups(): Promise<void> {
-  try {
-    const [trimSizes, coverStyles, coverFinishes, printTypes, paperStocks, bindingTypes] =
-      await Promise.all([
-        api.get<ProductOption[]>('/products/trim-sizes'),
-        api.get<ProductOption[]>('/products/cover-styles'),
-        api.get<ProductOption[]>('/products/cover-finishes'),
-        api.get<ProductOption[]>('/products/print-types'),
-        api.get<ProductOption[]>('/products/paper-stocks'),
-        api.get<ProductOption[]>('/products/binding-types'),
-      ])
-    trimSizeMap.value = buildMap(trimSizes.data)
-    coverStyleMap.value = buildMap(coverStyles.data)
-    coverFinishMap.value = buildMap(coverFinishes.data)
-    printTypeMap.value = buildMap(printTypes.data)
-    paperStockMap.value = buildMap(paperStocks.data)
-    bindingTypeMap.value = buildMap(bindingTypes.data)
-  } catch {
-    // Non-fatal — IDs will fall back to "#N" display
-  }
-}
 
 async function loadQuotes(page = currentPage.value): Promise<void> {
   isLoading.value = true
@@ -158,12 +111,12 @@ function formatPrice(value: number): string {
 
 function configSummary(q: SavedQuote): string {
   const parts = [
-    lookupName(trimSizeMap.value, q.config.trimSizeId),
-    lookupName(coverStyleMap.value, q.config.coverStyleId),
-    lookupName(coverFinishMap.value, q.config.coverFinishId),
-    lookupName(printTypeMap.value, q.config.printTypeId),
-    lookupName(paperStockMap.value, q.config.paperStockId),
-    lookupName(bindingTypeMap.value, q.config.bindingTypeId),
+    q.trimSize?.name ?? 'Unknown',
+    q.coverStyle?.name ?? 'Unknown',
+    q.coverFinish?.name ?? 'Unknown',
+    q.printType?.name ?? 'Unknown',
+    q.paperStock?.name ?? 'Unknown',
+    q.bindingType?.name ?? 'Unknown',
     `${q.pageCount} pages`,
     `Qty ${q.quantity}`,
   ]

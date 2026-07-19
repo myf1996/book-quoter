@@ -1,6 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { ILike, Repository } from 'typeorm';
+import { Coupon, DiscountType } from '../../entities/coupon.entity';
+import { CouponUsage } from '../../entities/coupon-usage.entity';
 import { ProductStatus } from '../../common/enums/product-status.enum';
 import { BindingRate } from '../../entities/binding-rate.entity';
 import { BindingType } from '../../entities/binding-type.entity';
@@ -13,6 +15,8 @@ import { PrintType } from '../../entities/print-type.entity';
 import { Quote } from '../../entities/quote.entity';
 import { TrimSize } from '../../entities/trim-size.entity';
 import { User, UserRole } from '../../entities/user.entity';
+import { CreateCouponDto } from './dto/create-coupon.dto';
+import { UpdateCouponDto } from './dto/update-coupon.dto';
 import { CreateBindingRateDto } from './dto/create-binding-rate.dto';
 import { CreateCoverRateDto } from './dto/create-cover-rate.dto';
 import { CreatePageRateDto } from './dto/create-page-rate.dto';
@@ -39,6 +43,21 @@ export interface UserView {
   createdAt: Date;
 }
 
+/** Coupon with total usage count */
+export interface CouponWithStats extends Coupon {
+  usageCount: number;
+}
+
+/** A single coupon redemption viewed from the admin user detail */
+export interface CouponUsageView {
+  couponCode: string;
+  discountType: DiscountType;
+  discountValue: number;
+  discountAmount: number | null;
+  usedAt: Date;
+  quoteId: string | null;
+}
+
 /** Paginated result wrapper */
 export interface PaginatedResponse<T> {
   data: T[];
@@ -46,6 +65,27 @@ export interface PaginatedResponse<T> {
   page: number;
   limit: number;
   totalPages: number;
+}
+
+/** Fully resolved quote detail for admin view */
+export interface QuoteDetailView {
+  id: string;
+  createdAt: Date;
+  user: { id: string; name: string; email: string; role: string } | null;
+  configuration: {
+    trimSize: string;
+    coverStyle: string;
+    coverFinish: string;
+    printType: string;
+    paperStock: string;
+    bindingType: string;
+    pageCount: number;
+    quantity: number;
+  };
+  priceBreakdown: Quote['priceBreakdown'];
+  totalPrice: number;
+  couponCode: string | null;
+  discountAmount: number | null;
 }
 
 const DEFAULT_LIMIT = 20;
@@ -69,6 +109,8 @@ export class AdminService {
     @InjectRepository(BindingRate) private bindingRateRepo: Repository<BindingRate>,
     @InjectRepository(User) private userRepo: Repository<User>,
     @InjectRepository(Quote) private quoteRepo: Repository<Quote>,
+    @InjectRepository(Coupon) private couponRepo: Repository<Coupon>,
+    @InjectRepository(CouponUsage) private couponUsageRepo: Repository<CouponUsage>,
   ) {}
 
   // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -510,16 +552,180 @@ export class AdminService {
 
   /**
    * Returns a paginated list of all quotes with user relation, ordered newest first.
-   * @param page - 1-based page number (default 1)
-   * @param limit - Items per page (default 20)
+   * Optionally filters by partial user name/email and/or exact coupon code.
    */
-  async getAllQuotes(page = DEFAULT_PAGE, limit = DEFAULT_LIMIT): Promise<PaginatedResponse<Quote>> {
+  async getAllQuotes(
+    page = DEFAULT_PAGE,
+    limit = DEFAULT_LIMIT,
+    userSearch?: string,
+    couponCode?: string,
+  ): Promise<PaginatedResponse<Quote>> {
+    const search = userSearch?.trim();
+    const coupon = couponCode?.trim().toUpperCase();
+
+    let whereClause: object | object[] | undefined;
+
+    if (search && coupon) {
+      whereClause = [
+        { user: { name: ILike(`%${search}%`) }, couponCode: coupon },
+        { user: { email: ILike(`%${search}%`) }, couponCode: coupon },
+      ];
+    } else if (search) {
+      whereClause = [
+        { user: { name: ILike(`%${search}%`) } },
+        { user: { email: ILike(`%${search}%`) } },
+      ];
+    } else if (coupon) {
+      whereClause = { couponCode: coupon };
+    }
+
     const [data, total] = await this.quoteRepo.findAndCount({
-      relations: ['user'],
+      relations: ['user', 'trimSize', 'coverStyle', 'coverFinish', 'printType', 'paperStock', 'bindingType'],
+      where: whereClause,
       order: { createdAt: 'DESC' },
       skip: (page - 1) * limit,
       take: limit,
     });
     return this.paginate(data, total, page, limit);
+  }
+
+  /**
+   * Returns full resolved details for a single quote, with product names looked up.
+   * @throws NotFoundException if the quote does not exist
+   */
+  async getQuoteDetail(id: string): Promise<QuoteDetailView> {
+    const quote = await this.quoteRepo.findOne({
+      where: { id },
+      relations: ['user', 'trimSize', 'coverStyle', 'coverFinish', 'printType', 'paperStock', 'bindingType'],
+    });
+    if (!quote) throw new NotFoundException(`Quote #${id} not found`);
+
+    return {
+      id: quote.id,
+      createdAt: quote.createdAt,
+      user: quote.user
+        ? { id: quote.user.id, name: quote.user.name, email: quote.user.email, role: quote.user.role }
+        : null,
+      configuration: {
+        trimSize: quote.trimSize.name,
+        coverStyle: quote.coverStyle.name,
+        coverFinish: quote.coverFinish.name,
+        printType: quote.printType.name,
+        paperStock: quote.paperStock.name,
+        bindingType: quote.bindingType.name,
+        pageCount: quote.pageCount,
+        quantity: quote.quantity,
+      },
+      priceBreakdown: quote.priceBreakdown,
+      totalPrice: Number(quote.totalPrice),
+      couponCode: quote.couponCode,
+      discountAmount: quote.discountAmount !== null ? Number(quote.discountAmount) : null,
+    };
+  }
+
+  // ─── Coupon Management ────────────────────────────────────────────────────────
+
+  /**
+   * Returns all coupons with their total usage count and optional user info.
+   */
+  async getAllCoupons(): Promise<CouponWithStats[]> {
+    const coupons = await this.couponRepo.find({
+      relations: ['applicableUser'],
+      withDeleted: false,
+      order: { createdAt: 'DESC' },
+    });
+
+    const counts = await Promise.all(
+      coupons.map((c) => this.couponUsageRepo.count({ where: { coupon: { id: c.id } } })),
+    );
+
+    return coupons.map((c, i) => Object.assign(c, { usageCount: counts[i] }));
+  }
+
+  /**
+   * Creates a new coupon.
+   * @param dto - Coupon configuration
+   */
+  async createCoupon(dto: CreateCouponDto): Promise<Coupon> {
+    const coupon = this.couponRepo.create({
+      code: dto.code,
+      discountType: dto.discountType,
+      discountValue: dto.discountValue,
+      maxUsesPerUser: dto.maxUsesPerUser ?? 1,
+      totalMaxUses: dto.totalMaxUses ?? null,
+      status: (dto.isActive ?? true) ? ProductStatus.ACTIVE : ProductStatus.INACTIVE,
+      expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : null,
+      applicableUser: dto.applicableUserId ? ({ id: dto.applicableUserId } as User) : null,
+    });
+    return this.couponRepo.save(coupon);
+  }
+
+  /**
+   * Updates an existing coupon by ID.
+   * @throws NotFoundException if the coupon does not exist
+   */
+  async updateCoupon(id: string, dto: UpdateCouponDto): Promise<Coupon> {
+    const coupon = await this.couponRepo.findOne({ where: { id }, relations: ['applicableUser'] });
+    if (!coupon) throw new NotFoundException(`Coupon #${id} not found`);
+
+    if (dto.code !== undefined) coupon.code = dto.code;
+    if (dto.discountType !== undefined) coupon.discountType = dto.discountType;
+    if (dto.discountValue !== undefined) coupon.discountValue = dto.discountValue;
+    if (dto.maxUsesPerUser !== undefined) coupon.maxUsesPerUser = dto.maxUsesPerUser;
+    if (dto.totalMaxUses !== undefined) coupon.totalMaxUses = dto.totalMaxUses ?? null;
+    if (dto.isActive !== undefined) coupon.status = dto.isActive ? ProductStatus.ACTIVE : ProductStatus.INACTIVE;
+    if (dto.expiresAt !== undefined) coupon.expiresAt = dto.expiresAt ? new Date(dto.expiresAt) : null;
+    if (dto.applicableUserId !== undefined) {
+      coupon.applicableUser = dto.applicableUserId ? ({ id: dto.applicableUserId } as User) : null;
+    }
+
+    return this.couponRepo.save(coupon);
+  }
+
+  /**
+   * Soft-deletes a coupon by ID.
+   * @throws NotFoundException if the coupon does not exist
+   */
+  async deleteCoupon(id: string): Promise<void> {
+    const result = await this.couponRepo.softDelete(id);
+    if (!result.affected) throw new NotFoundException(`Coupon #${id} not found`);
+  }
+
+  /**
+   * Returns all coupons used by a specific user, newest first.
+   */
+  async getUserCouponUsage(userId: string): Promise<CouponUsageView[]> {
+    const usages = await this.couponUsageRepo.find({
+      where: { user: { id: userId } },
+      relations: ['coupon', 'quote'],
+      order: { createdAt: 'DESC' },
+    });
+
+    return usages.map((u) => ({
+      couponCode: u.coupon.code,
+      discountType: u.coupon.discountType,
+      discountValue: Number(u.coupon.discountValue),
+      discountAmount: u.quote ? Number(u.quote.discountAmount) : null,
+      usedAt: u.createdAt,
+      quoteId: u.quote?.id ?? null,
+    }));
+  }
+
+  /**
+   * Returns all quotes that used a specific coupon, newest first.
+   */
+  async getCouponQuotes(couponId: string): Promise<Quote[]> {
+    const coupon = await this.couponRepo.findOneBy({ id: couponId });
+    if (!coupon) throw new NotFoundException(`Coupon #${couponId} not found`);
+
+    const usages = await this.couponUsageRepo.find({
+      where: { coupon: { id: couponId } },
+      relations: ['quote', 'quote.user', 'quote.trimSize', 'quote.coverStyle', 'quote.coverFinish', 'quote.printType', 'quote.paperStock', 'quote.bindingType'],
+      order: { createdAt: 'DESC' },
+    });
+
+    return usages
+      .filter((u) => u.quote !== null)
+      .map((u) => u.quote as Quote);
   }
 }

@@ -8,22 +8,25 @@
 
 ## Entity Base Class
 
-All 11 entities extend **`BaseAppEntity`** (abstract TypeORM class), which provides:
+All 13 entities extend **`BaseAppEntity`** (abstract TypeORM class at `backend/src/entities/base-app.entity.ts`), which provides:
 
 | Column | SQL type | Notes |
 |--------|----------|-------|
+| `id` | `uuid` PK | Auto-generated UUID (`@PrimaryGeneratedColumn('uuid')`) |
+| `status` | `enum('active','inactive')` | `ProductStatus` enum, default `active` (`@Column`) |
 | `created_at` | `timestamp` | Auto-set on insert (`@CreateDateColumn`) |
+| `updated_at` | `timestamp` | Auto-updated on every save (`@UpdateDateColumn`) |
 | `deleted_at` | `timestamp` nullable | Soft-delete (`@DeleteDateColumn`) — set on delete, `null` for active records |
 
 **`SnakeNamingStrategy`** from `typeorm-naming-strategies` is applied globally — all camelCase TypeScript properties map to `snake_case` columns automatically (e.g. `createdAt` → `created_at`).
 
-**UUID primary keys** — All entities use `@PrimaryGeneratedColumn('uuid')`. PKs are `uuid` in PostgreSQL, `string` in TypeScript.
+**UUID primary keys** — All entities inherit `@PrimaryGeneratedColumn('uuid')` from `BaseAppEntity`. PKs are `uuid` in PostgreSQL, `string` in TypeScript.
 
 ---
 
 ## `ProductStatus` Enum
 
-All 6 product option entities carry a `status` column using this enum:
+All entities inherit a `status` column from `BaseAppEntity` using this enum:
 
 ```typescript
 export enum ProductStatus {
@@ -32,9 +35,12 @@ export enum ProductStatus {
 }
 ```
 
+For the 6 product option entities (`trim_sizes`, `cover_styles`, `cover_finishes`, `print_types`, `paper_stocks`, `binding_types`):
 - `active` — visible in the customer wizard via `GET /api/products/*`
 - `inactive` — hidden from customers; only visible in admin endpoints
 - New records created by admins default to `inactive`
+
+For non-product entities (`quotes`, `coupons`, `coupon_usages`, rate tables), the `status` column is inherited but not currently used for filtering — it is reserved for future business logic.
 
 ---
 
@@ -76,27 +82,26 @@ Stores completed quote configurations and their calculated prices.
 
 | Column | SQL type | TS type | Notes |
 |--------|----------|---------|-------|
-| `id` | `uuid` PK | `string` | Auto-generated UUID |
-| `config` | `jsonb` | `QuoteConfig` | All six wizard option UUIDs (see `QuoteConfig` shape below) |
+| `id` | `uuid` PK | `string` | Via `BaseAppEntity` |
+| `trim_size_id` | `uuid` NOT NULL | `string` | FK → `trim_sizes.id`; `onDelete: RESTRICT` |
+| `cover_style_id` | `uuid` NOT NULL | `string` | FK → `cover_styles.id`; `onDelete: RESTRICT` |
+| `cover_finish_id` | `uuid` NOT NULL | `string` | FK → `cover_finishes.id`; `onDelete: RESTRICT` |
+| `print_type_id` | `uuid` NOT NULL | `string` | FK → `print_types.id`; `onDelete: RESTRICT` |
+| `paper_stock_id` | `uuid` NOT NULL | `string` | FK → `paper_stocks.id`; `onDelete: RESTRICT` |
+| `binding_type_id` | `uuid` NOT NULL | `string` | FK → `binding_types.id`; `onDelete: RESTRICT` |
 | `page_count` | `integer` | `number` | Number of pages in the book |
 | `quantity` | `integer` | `number` | Print run quantity |
 | `total_price` | `decimal(10,2)` | `number` | Final price after tax |
 | `price_breakdown` | `jsonb` | `PriceBreakdown` | Full line-item breakdown (see below) |
-| `user_id` | `uuid` nullable | `string \| null` | FK → `users.id`; null for quotes saved before auth existed |
+| `coupon_code` | `varchar` nullable | `string \| null` | Code of the coupon applied at save time; null if none |
+| `discount_amount` | `decimal(10,2)` nullable | `number \| null` | Discount amount deducted; null if no coupon used |
+| `user_id` | `uuid` nullable | `string \| null` | FK → `users.id`; `onDelete: RESTRICT`; null for pre-auth quotes |
+| `status` | `enum('active','inactive')` | `ProductStatus` | Via `BaseAppEntity` (default `active`) |
 | `created_at` | `timestamp` | `Date` | Via `BaseAppEntity` |
+| `updated_at` | `timestamp` | `Date` | Via `BaseAppEntity` |
 | `deleted_at` | `timestamp` nullable | `Date \| null` | Soft-delete via `BaseAppEntity` |
 
-**`QuoteConfig` shape (stored as JSONB):**
-```typescript
-{
-  trimSizeId: string      // UUID
-  coverStyleId: string    // UUID
-  coverFinishId: string   // UUID
-  printTypeId: string     // UUID
-  paperStockId: string    // UUID
-  bindingTypeId: string   // UUID
-}
-```
+All 6 product FK relations are loaded eagerly (`eager: true`) so the full product object (id + name) is always included in API responses without a separate join.
 
 **`PriceBreakdown` shape (stored as JSONB):**
 ```typescript
@@ -109,6 +114,56 @@ Stores completed quote configurations and their calculated prices.
   total: number         // subtotal + tax
 }
 ```
+
+---
+
+## Coupons Table
+
+Stores discount coupon definitions.
+
+**Entity:** `backend/src/entities/coupon.entity.ts`
+
+| Column | SQL type | TS type | Notes |
+|--------|----------|---------|-------|
+| `id` | `uuid` PK | `string` | Via `BaseAppEntity` |
+| `code` | `varchar(255)` UNIQUE | `string` | Stored uppercase; unique coupon code |
+| `discount_type` | `enum('fixed','percentage')` | `DiscountType` | Fixed dollar or percentage discount |
+| `discount_value` | `decimal(10,2)` | `number` | Dollar amount (fixed) or percentage value (percentage) |
+| `applicable_user_id` | `uuid` nullable | `string \| null` | FK → `users.id`; `onDelete: RESTRICT`; null = available to all users |
+| `max_uses_per_user` | `integer` | `number` | Default `1` |
+| `total_max_uses` | `integer` nullable | `number \| null` | Max redemptions across all users; null = unlimited |
+| `expires_at` | `timestamp` nullable | `Date \| null` | Optional expiry; null = never expires |
+| `status` | `enum('active','inactive')` | `ProductStatus` | Via `BaseAppEntity`; `active` = redeemable |
+| `created_at` | `timestamp` | `Date` | Via `BaseAppEntity` |
+| `updated_at` | `timestamp` | `Date` | Via `BaseAppEntity` |
+| `deleted_at` | `timestamp` nullable | `Date \| null` | Soft-delete via `BaseAppEntity` |
+
+**`DiscountType` enum:**
+```typescript
+export enum DiscountType {
+  FIXED = 'fixed',
+  PERCENTAGE = 'percentage',
+}
+```
+
+---
+
+## Coupon Usages Table
+
+Records each redemption of a coupon against a saved quote.
+
+**Entity:** `backend/src/entities/coupon-usage.entity.ts`
+
+| Column | SQL type | TS type | Notes |
+|--------|----------|---------|-------|
+| `id` | `uuid` PK | `string` | Via `BaseAppEntity` |
+| `coupon_id` | `uuid` | `string` | FK → `coupons.id`; `onDelete: RESTRICT` |
+| `user_id` | `uuid` | `string` | FK → `users.id`; `onDelete: RESTRICT` |
+| `quote_id` | `uuid` nullable | `string \| null` | FK → `quotes.id`; `onDelete: RESTRICT` |
+| `status` | `enum('active','inactive')` | `ProductStatus` | Via `BaseAppEntity` |
+| `created_at` | `timestamp` | `Date` | Via `BaseAppEntity`; serves as `usedAt` timestamp |
+| `updated_at` | `timestamp` | `Date` | Via `BaseAppEntity` |
+| `deleted_at` | `timestamp` nullable | `Date \| null` | Soft-delete via `BaseAppEntity` |
 
 ---
 
@@ -303,35 +358,39 @@ npx ts-node src/database/seeds/seed.ts
 9. 3 binding rates
 10. Admin user: `admin@onpress.com` / `Admin123!` (role: admin) — only created if not already present
 
-**Total:** 5+3+3+2+3+3 = 19 product records + 18 rate rows + 1 admin user = **38 rows** across 10 tables.
+**Total:** 5+3+3+2+3+3 = 19 product records + 18 rate rows + 1 admin user = **38 rows** across 10 tables (not counting quotes, coupons, or coupon_usages which start empty).
 
 ---
 
 ## Entity Relationships
 
 ```
-users ──────────────────────────────────── quotes
-                                            (user_id FK, nullable)
+users ──────────────────────────────────── quotes (user_id FK nullable, RESTRICT)
+users ──────────────────────────────────── coupons (applicable_user_id FK nullable, RESTRICT)
+users ──────────────────────────────────── coupon_usages (user_id FK, RESTRICT)
 
-trim_sizes ─────────────────────────────── (stored by UUID in quotes.config jsonb)
-cover_styles ───────────────────────────── (same)
-cover_finishes ─────────────────────────── (same)
-print_types ────────────────────────────── (same)
-paper_stocks ───────────────────────────── (same)
-binding_types ──────────────────────────── (same)
+trim_sizes ─────────────────────────────── quotes (trim_size_id FK NOT NULL, RESTRICT)
+cover_styles ───────────────────────────── quotes (cover_style_id FK NOT NULL, RESTRICT)
+cover_finishes ─────────────────────────── quotes (cover_finish_id FK NOT NULL, RESTRICT)
+print_types ────────────────────────────── quotes (print_type_id FK NOT NULL, RESTRICT)
+paper_stocks ───────────────────────────── quotes (paper_stock_id FK NOT NULL, RESTRICT)
+binding_types ──────────────────────────── quotes (binding_type_id FK NOT NULL, RESTRICT)
 
 print_types ──┐
-              ├── page_rates
+              ├── page_rates (RESTRICT)
 paper_stocks ─┘
 
 cover_styles ──┐
-               ├── cover_rates
+               ├── cover_rates (RESTRICT)
 cover_finishes ┘
 
-binding_types ─── binding_rates
+binding_types ─── binding_rates (RESTRICT)
+
+coupons ────────────────────────────────── coupon_usages (coupon_id FK, RESTRICT)
+quotes ─────────────────────────────────── coupon_usages (quote_id FK nullable, RESTRICT)
 ```
 
-The 6 config IDs inside `quotes.config` (JSONB) are not foreign keys enforced by PostgreSQL — they are stored as plain UUIDs. This keeps the quote record self-contained and avoids cascade issues if a product option is later deleted.
+All ManyToOne relations use `onDelete: 'RESTRICT'` — PostgreSQL will block deletion of any record that is still referenced by another table. The 6 product FK columns on `quotes` are NOT NULL, meaning every saved quote must reference a valid product option for all 6 attributes.
 
 ---
 

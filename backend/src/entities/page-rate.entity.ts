@@ -1,4 +1,4 @@
-import { Column, Entity, ManyToOne, PrimaryGeneratedColumn, Unique } from 'typeorm';
+import { Column, Entity, ManyToOne, Unique } from 'typeorm';
 import { BaseAppEntity } from './base-app.entity';
 import { PaperStock } from './paper-stock.entity';
 import { PrintType } from './print-type.entity';
@@ -7,9 +7,6 @@ import { PrintType } from './print-type.entity';
 @Entity('page_rates')
 @Unique(['printType', 'paperStock'])
 export class PageRate extends BaseAppEntity {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
-
   @ManyToOne(() => PrintType, { onDelete: 'RESTRICT' })
   printType: PrintType;
 
