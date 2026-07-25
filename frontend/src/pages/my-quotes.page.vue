@@ -110,24 +110,6 @@ function formatPrice(value: number): string {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value)
 }
 
-function accentColor(q: SavedQuote): string {
-  return q.primaryColor ?? '#6366f1'
-}
-
-interface Chip {
-  label: string
-  icon?: string
-}
-
-function configChips(q: SavedQuote): Chip[] {
-  const chips: Chip[] = []
-  if (q.trimSize) chips.push({ label: q.trimSize.name, icon: 'size' })
-  if (q.coverStyle) chips.push({ label: q.coverStyle.name, icon: 'cover' })
-  if (q.coverFinish) chips.push({ label: q.coverFinish.name, icon: 'finish' })
-  if (q.bindingType) chips.push({ label: q.bindingType.name, icon: 'bind' })
-  if (q.paperStock) chips.push({ label: q.paperStock.name, icon: 'paper' })
-  return chips
-}
 </script>
 
 <template>
