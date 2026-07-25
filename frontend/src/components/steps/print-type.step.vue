@@ -28,14 +28,22 @@ const selectedOption = computed(() =>
   options.value.find((o) => o.id === quoteStore.quoteState.printTypeId) ?? null,
 )
 
-/** True if the selected type has preset colors (i.e. Black & White) */
-const isBWType = computed(() =>
-  selectedOption.value !== null && selectedOption.value.primaryColor != null,
-)
+/** Returns true when the option's name signals a preset B&W type.
+ *  Falls back to name matching so the UI is robust even when the DB
+ *  hasn't been seeded with primaryColor yet. */
+function optionIsBW(opt: typeof options.value[number] | null): boolean {
+  if (!opt) return false
+  if (opt.primaryColor != null) return true
+  const name = String(opt.name ?? '').toLowerCase()
+  return name.includes('black') || name.includes('b&w') || name.includes('b & w')
+}
 
-/** True if the selected type requires user to pick colors (i.e. Color) */
+/** True when a preset-color (B&W) type is selected */
+const isBWType = computed(() => optionIsBW(selectedOption.value))
+
+/** True when a user-configurable color type is selected */
 const isColorType = computed(() =>
-  selectedOption.value !== null && selectedOption.value.primaryColor == null,
+  selectedOption.value !== null && !optionIsBW(selectedOption.value),
 )
 
 // ─── Local color state for the color pickers ──────────────────────────────────
@@ -45,14 +53,13 @@ const localSecondary = ref(quoteStore.quoteState.secondaryColor ?? '#e8e8e8')
 function selectPrintType(option: typeof options.value[number]): void {
   quoteStore.updateQuoteState({ printTypeId: option.id })
 
-  if (option.primaryColor) {
-    // B&W — auto-fill from API defaults
-    quoteStore.updateQuoteState({
-      primaryColor: option.primaryColor as string,
-      secondaryColor: option.secondaryColor as string,
-    })
+  if (optionIsBW(option)) {
+    // B&W — use API colors if seeded, fall back to hard-coded defaults
+    const primary = (option.primaryColor as string | null) ?? '#000000'
+    const secondary = (option.secondaryColor as string | null) ?? '#FFFFFF'
+    quoteStore.updateQuoteState({ primaryColor: primary, secondaryColor: secondary })
   } else {
-    // Color — reset store; user must pick
+    // Color — user must pick
     localPrimary.value = '#1a1a2e'
     localSecondary.value = '#e8e8e8'
     quoteStore.updateQuoteState({ primaryColor: null, secondaryColor: null })
@@ -173,11 +180,20 @@ const modalDescription = computed(() =>
         <!-- Primary -->
         <div>
           <label class="block text-xs font-medium text-gray-700 mb-2">Primary Color</label>
-          <div class="flex items-center gap-3">
+          <div
+            class="flex items-center gap-3 p-2.5 rounded-xl border-2 border-gray-200 hover:border-indigo-400 cursor-pointer transition-colors group"
+            :style="{ borderColor: localPrimary + '55' }"
+          >
             <div
-              class="w-10 h-10 rounded-lg border-2 border-gray-200 cursor-pointer overflow-hidden relative flex-shrink-0"
+              class="w-10 h-10 rounded-lg overflow-hidden relative flex-shrink-0 shadow-sm ring-2 ring-white"
               :style="{ background: localPrimary }"
             >
+              <!-- Pencil overlay on hover -->
+              <div class="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536M9 11l6-6 3 3-6 6H9v-3z"/>
+                </svg>
+              </div>
               <input
                 type="color"
                 :value="localPrimary"
@@ -186,8 +202,13 @@ const modalDescription = computed(() =>
               />
             </div>
             <div>
-              <p class="text-sm font-mono text-gray-800 uppercase">{{ localPrimary }}</p>
-              <p class="text-xs text-gray-400">Click to change</p>
+              <p class="text-sm font-mono font-semibold text-gray-800 uppercase">{{ localPrimary }}</p>
+              <p class="text-xs font-medium text-indigo-500 flex items-center gap-1">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536M9 11l6-6 3 3-6 6H9v-3z"/>
+                </svg>
+                Click swatch to edit
+              </p>
             </div>
           </div>
         </div>
@@ -195,11 +216,19 @@ const modalDescription = computed(() =>
         <!-- Secondary -->
         <div>
           <label class="block text-xs font-medium text-gray-700 mb-2">Secondary Color</label>
-          <div class="flex items-center gap-3">
+          <div
+            class="flex items-center gap-3 p-2.5 rounded-xl border-2 border-gray-200 hover:border-indigo-400 cursor-pointer transition-colors group"
+            :style="{ borderColor: localSecondary + '55' }"
+          >
             <div
-              class="w-10 h-10 rounded-lg border-2 border-gray-200 cursor-pointer overflow-hidden relative flex-shrink-0"
+              class="w-10 h-10 rounded-lg overflow-hidden relative flex-shrink-0 shadow-sm ring-2 ring-white"
               :style="{ background: localSecondary }"
             >
+              <div class="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536M9 11l6-6 3 3-6 6H9v-3z"/>
+                </svg>
+              </div>
               <input
                 type="color"
                 :value="localSecondary"
@@ -208,8 +237,13 @@ const modalDescription = computed(() =>
               />
             </div>
             <div>
-              <p class="text-sm font-mono text-gray-800 uppercase">{{ localSecondary }}</p>
-              <p class="text-xs text-gray-400">Click to change</p>
+              <p class="text-sm font-mono font-semibold text-gray-800 uppercase">{{ localSecondary }}</p>
+              <p class="text-xs font-medium text-indigo-500 flex items-center gap-1">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536M9 11l6-6 3 3-6 6H9v-3z"/>
+                </svg>
+                Click swatch to edit
+              </p>
             </div>
           </div>
         </div>
