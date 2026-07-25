@@ -7,7 +7,8 @@ import { ProductStatus } from '../../common/enums/product-status.enum';
 import { BindingRate } from '../../entities/binding-rate.entity';
 import { BindingType } from '../../entities/binding-type.entity';
 import { CoverFinish } from '../../entities/cover-finish.entity';
-import { CoverRate } from '../../entities/cover-rate.entity';
+import { CoverFinishRate } from '../../entities/cover-finish-rate.entity';
+import { CoverStyleRate } from '../../entities/cover-style-rate.entity';
 import { CoverStyle } from '../../entities/cover-style.entity';
 import { PageRate } from '../../entities/page-rate.entity';
 import { PaperStock } from '../../entities/paper-stock.entity';
@@ -18,11 +19,13 @@ import { User, UserRole } from '../../entities/user.entity';
 import { CreateCouponDto } from './dto/create-coupon.dto';
 import { UpdateCouponDto } from './dto/update-coupon.dto';
 import { CreateBindingRateDto } from './dto/create-binding-rate.dto';
-import { CreateCoverRateDto } from './dto/create-cover-rate.dto';
+import { CreateCoverFinishRateDto } from './dto/create-cover-finish-rate.dto';
+import { CreateCoverStyleRateDto } from './dto/create-cover-style-rate.dto';
 import { CreatePageRateDto } from './dto/create-page-rate.dto';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateBindingRateDto } from './dto/update-binding-rate.dto';
-import { UpdateCoverRateDto } from './dto/update-cover-rate.dto';
+import { UpdateCoverFinishRateDto } from './dto/update-cover-finish-rate.dto';
+import { UpdateCoverStyleRateDto } from './dto/update-cover-style-rate.dto';
 import { UpdatePageRateDto } from './dto/update-page-rate.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { UpdateUserRoleDto } from './dto/update-user-role.dto';
@@ -107,7 +110,8 @@ export class AdminService {
     @InjectRepository(PaperStock) private paperStockRepo: Repository<PaperStock>,
     @InjectRepository(BindingType) private bindingTypeRepo: Repository<BindingType>,
     @InjectRepository(PageRate) private pageRateRepo: Repository<PageRate>,
-    @InjectRepository(CoverRate) private coverRateRepo: Repository<CoverRate>,
+    @InjectRepository(CoverStyleRate) private coverStyleRateRepo: Repository<CoverStyleRate>,
+    @InjectRepository(CoverFinishRate) private coverFinishRateRepo: Repository<CoverFinishRate>,
     @InjectRepository(BindingRate) private bindingRateRepo: Repository<BindingRate>,
     @InjectRepository(User) private userRepo: Repository<User>,
     @InjectRepository(Quote) private quoteRepo: Repository<Quote>,
@@ -418,49 +422,90 @@ export class AdminService {
     if (!result.affected) throw new NotFoundException(`PageRate #${id} not found`);
   }
 
-  // ─── CoverRate CRUD ───────────────────────────────────────────────────────────
+  // ─── CoverStyleRate CRUD ──────────────────────────────────────────────────────
 
-  /** @returns All cover rates with coverStyle and coverFinish relations loaded */
-  getAllCoverRates(): Promise<CoverRate[]> {
-    return this.coverRateRepo.find({ relations: ['coverStyle', 'coverFinish'] });
+  /** @returns All cover style rates with coverStyle relation loaded */
+  getAllCoverStyleRates(): Promise<CoverStyleRate[]> {
+    return this.coverStyleRateRepo.find({ relations: ['coverStyle'] });
   }
 
   /**
-   * Creates a new cover rate.
-   * @param dto - coverStyleId, coverFinishId, and basePrice
+   * Creates a new cover style rate.
+   * @param dto - coverStyleId and basePrice
    */
-  async createCoverRate(dto: CreateCoverRateDto): Promise<CoverRate> {
-    const rate = this.coverRateRepo.create({
+  async createCoverStyleRate(dto: CreateCoverStyleRateDto): Promise<CoverStyleRate> {
+    const rate = this.coverStyleRateRepo.create({
       coverStyle: { id: dto.coverStyleId } as CoverStyle,
-      coverFinish: { id: dto.coverFinishId } as CoverFinish,
       basePrice: dto.basePrice,
     });
-    return this.coverRateRepo.save(rate);
+    return this.coverStyleRateRepo.save(rate);
   }
 
   /**
-   * Updates an existing cover rate by ID.
-   * @param id - Cover rate ID
+   * Updates an existing cover style rate by ID.
+   * @param id - Cover style rate ID
    * @param dto - Fields to update
-   * @throws NotFoundException if the cover rate does not exist
+   * @throws NotFoundException if the cover style rate does not exist
    */
-  async updateCoverRate(id: string, dto: UpdateCoverRateDto): Promise<CoverRate> {
-    const entity = await this.coverRateRepo.findOne({ where: { id }, relations: ['coverStyle', 'coverFinish'] });
-    if (!entity) throw new NotFoundException(`CoverRate #${id} not found`);
+  async updateCoverStyleRate(id: string, dto: UpdateCoverStyleRateDto): Promise<CoverStyleRate> {
+    const entity = await this.coverStyleRateRepo.findOne({ where: { id }, relations: ['coverStyle'] });
+    if (!entity) throw new NotFoundException(`CoverStyleRate #${id} not found`);
     if (dto.coverStyleId !== undefined) entity.coverStyle = { id: dto.coverStyleId } as CoverStyle;
-    if (dto.coverFinishId !== undefined) entity.coverFinish = { id: dto.coverFinishId } as CoverFinish;
     if (dto.basePrice !== undefined) entity.basePrice = dto.basePrice;
-    return this.coverRateRepo.save(entity);
+    return this.coverStyleRateRepo.save(entity);
   }
 
   /**
-   * Soft-deletes a cover rate by ID.
-   * @param id - Cover rate ID
-   * @throws NotFoundException if the cover rate does not exist
+   * Soft-deletes a cover style rate by ID.
+   * @param id - Cover style rate ID
+   * @throws NotFoundException if the cover style rate does not exist
    */
-  async deleteCoverRate(id: string): Promise<void> {
-    const result = await this.coverRateRepo.softDelete(id);
-    if (!result.affected) throw new NotFoundException(`CoverRate #${id} not found`);
+  async deleteCoverStyleRate(id: string): Promise<void> {
+    const result = await this.coverStyleRateRepo.softDelete(id);
+    if (!result.affected) throw new NotFoundException(`CoverStyleRate #${id} not found`);
+  }
+
+  // ─── CoverFinishRate CRUD ─────────────────────────────────────────────────────
+
+  /** @returns All cover finish rates with coverFinish relation loaded */
+  getAllCoverFinishRates(): Promise<CoverFinishRate[]> {
+    return this.coverFinishRateRepo.find({ relations: ['coverFinish'] });
+  }
+
+  /**
+   * Creates a new cover finish rate.
+   * @param dto - coverFinishId and addOnPrice
+   */
+  async createCoverFinishRate(dto: CreateCoverFinishRateDto): Promise<CoverFinishRate> {
+    const rate = this.coverFinishRateRepo.create({
+      coverFinish: { id: dto.coverFinishId } as CoverFinish,
+      addOnPrice: dto.addOnPrice,
+    });
+    return this.coverFinishRateRepo.save(rate);
+  }
+
+  /**
+   * Updates an existing cover finish rate by ID.
+   * @param id - Cover finish rate ID
+   * @param dto - Fields to update
+   * @throws NotFoundException if the cover finish rate does not exist
+   */
+  async updateCoverFinishRate(id: string, dto: UpdateCoverFinishRateDto): Promise<CoverFinishRate> {
+    const entity = await this.coverFinishRateRepo.findOne({ where: { id }, relations: ['coverFinish'] });
+    if (!entity) throw new NotFoundException(`CoverFinishRate #${id} not found`);
+    if (dto.coverFinishId !== undefined) entity.coverFinish = { id: dto.coverFinishId } as CoverFinish;
+    if (dto.addOnPrice !== undefined) entity.addOnPrice = dto.addOnPrice;
+    return this.coverFinishRateRepo.save(entity);
+  }
+
+  /**
+   * Soft-deletes a cover finish rate by ID.
+   * @param id - Cover finish rate ID
+   * @throws NotFoundException if the cover finish rate does not exist
+   */
+  async deleteCoverFinishRate(id: string): Promise<void> {
+    const result = await this.coverFinishRateRepo.softDelete(id);
+    if (!result.affected) throw new NotFoundException(`CoverFinishRate #${id} not found`);
   }
 
   // ─── BindingRate CRUD ─────────────────────────────────────────────────────────

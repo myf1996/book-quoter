@@ -20,6 +20,7 @@ interface ProductOption {
   height?: string | null
   minPages?: number | null
   maxPages?: number | null
+  pricingMultiplier?: number | null
   weight?: string | null
   primaryColor?: string | null
   secondaryColor?: string | null
@@ -62,6 +63,7 @@ const editWidth = ref('')
 const editHeight = ref('')
 const editMinPages = ref('')
 const editMaxPages = ref('')
+const editPricingMultiplier = ref('')
 const editWeight = ref('')
 const editPrimaryColor = ref('')
 const editSecondaryColor = ref('')
@@ -125,6 +127,7 @@ function clearEditFields(): void {
   editHeight.value = ''
   editMinPages.value = ''
   editMaxPages.value = ''
+  editPricingMultiplier.value = ''
   editWeight.value = ''
   editPrimaryColor.value = ''
   editSecondaryColor.value = ''
@@ -137,6 +140,7 @@ function startEdit(item: ProductOption): void {
   editHeight.value = item.height ?? ''
   editMinPages.value = item.minPages != null ? String(item.minPages) : ''
   editMaxPages.value = item.maxPages != null ? String(item.maxPages) : ''
+  editPricingMultiplier.value = item.pricingMultiplier != null ? String(item.pricingMultiplier) : ''
   editWeight.value = item.weight ?? ''
   editPrimaryColor.value = item.primaryColor ?? ''
   editSecondaryColor.value = item.secondaryColor ?? ''
@@ -161,6 +165,7 @@ async function saveEdit(id: string): Promise<void> {
       if (editHeight.value) payload.height = parseFloat(editHeight.value)
       if (editMinPages.value) payload.minPages = parseInt(editMinPages.value, 10)
       if (editMaxPages.value) payload.maxPages = parseInt(editMaxPages.value, 10)
+      if (editPricingMultiplier.value) payload.pricingMultiplier = parseFloat(editPricingMultiplier.value)
     } else if (isPaperStocks.value) {
       if (editWeight.value) payload.weight = editWeight.value.trim()
     } else if (isPrintTypes.value) {
@@ -307,6 +312,7 @@ onMounted(async () => {
                   <th class="px-3 py-3 w-16 text-right">H&quot;</th>
                   <th class="px-3 py-3 w-20 text-right">Min Pg</th>
                   <th class="px-3 py-3 w-20 text-right">Max Pg</th>
+                  <th class="px-3 py-3 w-28 text-right">Price Multiplier</th>
                 </template>
                 <!-- PaperStock extras -->
                 <th v-else-if="isPaperStocks" class="px-3 py-3 w-28">Weight</th>
@@ -323,7 +329,7 @@ onMounted(async () => {
               <!-- Add form row -->
               <tr v-if="showAddForm" class="bg-indigo-50">
                 <td class="px-6 py-3 text-gray-400 text-xs hidden sm:table-cell">New</td>
-                <td class="px-6 py-3" :colspan="isTrimSizes ? 5 : (isPrintTypes ? 3 : (isPaperStocks ? 2 : 1))">
+                <td class="px-6 py-3" :colspan="isTrimSizes ? 6 : (isPrintTypes ? 3 : (isPaperStocks ? 2 : 1))">
                   <input
                     v-model="addName"
                     type="text"
@@ -356,7 +362,7 @@ onMounted(async () => {
               <!-- Empty state -->
               <tr v-if="items.length === 0 && !showAddForm">
                 <td
-                  :colspan="isTrimSizes ? 7 : (isPrintTypes ? 6 : (isPaperStocks ? 5 : 4))"
+                  :colspan="isTrimSizes ? 8 : (isPrintTypes ? 6 : (isPaperStocks ? 5 : 4))"
                   class="px-6 py-10 text-center text-sm text-gray-400"
                 >
                   No items found. {{ statusFilter !== 'all' ? 'Try changing the filter.' : 'Click "Add New" to create one.' }}
@@ -434,6 +440,19 @@ onMounted(async () => {
                       class="w-16 border border-indigo-300 rounded px-2 py-1 text-xs text-right focus:outline-none focus:ring-1 focus:ring-indigo-400"
                     />
                     <span v-else class="text-gray-600 text-xs">{{ item.maxPages ?? '—' }}</span>
+                  </td>
+                  <td class="px-3 py-3 text-right">
+                    <input
+                      v-if="editingId === item.id"
+                      v-model="editPricingMultiplier"
+                      type="number"
+                      min="0.1"
+                      max="5"
+                      step="0.01"
+                      placeholder="1.00"
+                      class="w-16 border border-indigo-300 rounded px-2 py-1 text-xs text-right focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                    />
+                    <span v-else class="text-gray-600 text-xs">{{ item.pricingMultiplier != null ? `${Number(item.pricingMultiplier).toFixed(2)}×` : '—' }}</span>
                   </td>
                 </template>
 

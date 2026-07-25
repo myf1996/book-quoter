@@ -59,10 +59,10 @@ function selectPrintType(option: typeof options.value[number]): void {
     const secondary = (option.secondaryColor as string | null) ?? '#FFFFFF'
     quoteStore.updateQuoteState({ primaryColor: primary, secondaryColor: secondary })
   } else {
-    // Color — user must pick
+    // Color — pre-fill defaults so Next is enabled immediately; user can adjust
     localPrimary.value = '#1a1a2e'
     localSecondary.value = '#e8e8e8'
-    quoteStore.updateQuoteState({ primaryColor: null, secondaryColor: null })
+    quoteStore.updateQuoteState({ primaryColor: '#1a1a2e', secondaryColor: '#e8e8e8' })
   }
 }
 
@@ -174,7 +174,7 @@ const modalDescription = computed(() =>
     <!-- Color: user-defined pickers -->
     <div v-if="isColorType" class="mt-6 p-4 bg-white border border-indigo-100 rounded-xl">
       <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Choose Your Book's Colors</p>
-      <p class="text-xs text-gray-400 mb-4">Select a primary and secondary color for your interior printing.</p>
+      <p class="text-xs text-gray-400 mb-4">Default colors are pre-selected — click a swatch to customize.</p>
 
       <div class="grid grid-cols-2 gap-4">
         <!-- Primary -->

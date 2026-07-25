@@ -19,7 +19,8 @@ import { UserRole } from '../../entities/user.entity';
 import { BindingRate } from '../../entities/binding-rate.entity';
 import { BindingType } from '../../entities/binding-type.entity';
 import { CoverFinish } from '../../entities/cover-finish.entity';
-import { CoverRate } from '../../entities/cover-rate.entity';
+import { CoverFinishRate } from '../../entities/cover-finish-rate.entity';
+import { CoverStyleRate } from '../../entities/cover-style-rate.entity';
 import { CoverStyle } from '../../entities/cover-style.entity';
 import { PageRate } from '../../entities/page-rate.entity';
 import { PaperStock } from '../../entities/paper-stock.entity';
@@ -30,11 +31,13 @@ import { AdminService, CouponWithStats, CouponUsageView, DashboardStats, Paginat
 import { CreateCouponDto } from './dto/create-coupon.dto';
 import { UpdateCouponDto } from './dto/update-coupon.dto';
 import { CreateBindingRateDto } from './dto/create-binding-rate.dto';
-import { CreateCoverRateDto } from './dto/create-cover-rate.dto';
+import { CreateCoverFinishRateDto } from './dto/create-cover-finish-rate.dto';
+import { CreateCoverStyleRateDto } from './dto/create-cover-style-rate.dto';
 import { CreatePageRateDto } from './dto/create-page-rate.dto';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateBindingRateDto } from './dto/update-binding-rate.dto';
-import { UpdateCoverRateDto } from './dto/update-cover-rate.dto';
+import { UpdateCoverFinishRateDto } from './dto/update-cover-finish-rate.dto';
+import { UpdateCoverStyleRateDto } from './dto/update-cover-style-rate.dto';
 import { UpdatePageRateDto } from './dto/update-page-rate.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { UpdateUserRoleDto } from './dto/update-user-role.dto';
@@ -267,34 +270,64 @@ export class AdminController {
     return this.adminService.deletePageRate(id);
   }
 
-  // ─── Cover Rates ─────────────────────────────────────────────────────────────
+  // ─── Cover Style Rates ───────────────────────────────────────────────────────
 
-  /** GET /api/admin/cover-rates */
-  @Get('cover-rates')
-  getCoverRates(): Promise<CoverRate[]> {
-    return this.adminService.getAllCoverRates();
+  /** GET /api/admin/cover-style-rates */
+  @Get('cover-style-rates')
+  getCoverStyleRates(): Promise<CoverStyleRate[]> {
+    return this.adminService.getAllCoverStyleRates();
   }
 
-  /** POST /api/admin/cover-rates */
-  @Post('cover-rates')
-  createCoverRate(@Body() dto: CreateCoverRateDto): Promise<CoverRate> {
-    return this.adminService.createCoverRate(dto);
+  /** POST /api/admin/cover-style-rates */
+  @Post('cover-style-rates')
+  createCoverStyleRate(@Body() dto: CreateCoverStyleRateDto): Promise<CoverStyleRate> {
+    return this.adminService.createCoverStyleRate(dto);
   }
 
-  /** PATCH /api/admin/cover-rates/:id */
-  @Patch('cover-rates/:id')
-  updateCoverRate(
+  /** PATCH /api/admin/cover-style-rates/:id */
+  @Patch('cover-style-rates/:id')
+  updateCoverStyleRate(
     @Param('id') id: string,
-    @Body() dto: UpdateCoverRateDto,
-  ): Promise<CoverRate> {
-    return this.adminService.updateCoverRate(id, dto);
+    @Body() dto: UpdateCoverStyleRateDto,
+  ): Promise<CoverStyleRate> {
+    return this.adminService.updateCoverStyleRate(id, dto);
   }
 
-  /** DELETE /api/admin/cover-rates/:id */
-  @Delete('cover-rates/:id')
+  /** DELETE /api/admin/cover-style-rates/:id */
+  @Delete('cover-style-rates/:id')
   @HttpCode(204)
-  deleteCoverRate(@Param('id') id: string): Promise<void> {
-    return this.adminService.deleteCoverRate(id);
+  deleteCoverStyleRate(@Param('id') id: string): Promise<void> {
+    return this.adminService.deleteCoverStyleRate(id);
+  }
+
+  // ─── Cover Finish Rates ──────────────────────────────────────────────────────
+
+  /** GET /api/admin/cover-finish-rates */
+  @Get('cover-finish-rates')
+  getCoverFinishRates(): Promise<CoverFinishRate[]> {
+    return this.adminService.getAllCoverFinishRates();
+  }
+
+  /** POST /api/admin/cover-finish-rates */
+  @Post('cover-finish-rates')
+  createCoverFinishRate(@Body() dto: CreateCoverFinishRateDto): Promise<CoverFinishRate> {
+    return this.adminService.createCoverFinishRate(dto);
+  }
+
+  /** PATCH /api/admin/cover-finish-rates/:id */
+  @Patch('cover-finish-rates/:id')
+  updateCoverFinishRate(
+    @Param('id') id: string,
+    @Body() dto: UpdateCoverFinishRateDto,
+  ): Promise<CoverFinishRate> {
+    return this.adminService.updateCoverFinishRate(id, dto);
+  }
+
+  /** DELETE /api/admin/cover-finish-rates/:id */
+  @Delete('cover-finish-rates/:id')
+  @HttpCode(204)
+  deleteCoverFinishRate(@Param('id') id: string): Promise<void> {
+    return this.adminService.deleteCoverFinishRate(id);
   }
 
   // ─── Binding Rates ───────────────────────────────────────────────────────────

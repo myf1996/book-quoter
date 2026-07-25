@@ -11,6 +11,8 @@ import { User } from './user.entity';
 /** Full price breakdown for a quote */
 export interface PriceBreakdown {
   pageCost: number;
+  coverStyleCost: number;
+  coverFinishCost: number;
   coverCost: number;
   bindingCost: number;
   subtotal: number;

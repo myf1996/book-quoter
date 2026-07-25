@@ -5,7 +5,8 @@ import { BindingType } from '../../entities/binding-type.entity';
 import { Coupon } from '../../entities/coupon.entity';
 import { CouponUsage } from '../../entities/coupon-usage.entity';
 import { CoverFinish } from '../../entities/cover-finish.entity';
-import { CoverRate } from '../../entities/cover-rate.entity';
+import { CoverFinishRate } from '../../entities/cover-finish-rate.entity';
+import { CoverStyleRate } from '../../entities/cover-style-rate.entity';
 import { CoverStyle } from '../../entities/cover-style.entity';
 import { PageRate } from '../../entities/page-rate.entity';
 import { PaperStock } from '../../entities/paper-stock.entity';
@@ -27,7 +28,8 @@ import { AdminService } from './admin.service';
       PaperStock,
       BindingType,
       PageRate,
-      CoverRate,
+      CoverStyleRate,
+      CoverFinishRate,
       BindingRate,
       User,
       Quote,

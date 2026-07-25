@@ -18,4 +18,8 @@ export class TrimSize extends BaseAppEntity {
 
   @Column({ default: 840 })
   maxPages: number;
+
+  /** Multiplier applied to the per-page rate to account for paper size (e.g. 5.5×8.5 = 0.90, 8.5×11 = 1.40) */
+  @Column('decimal', { precision: 4, scale: 2, default: 1.00 })
+  pricingMultiplier: number;
 }

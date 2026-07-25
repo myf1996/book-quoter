@@ -7,8 +7,9 @@ import { ProductStatus } from '../../common/enums/product-status.enum';
 import { Coupon, DiscountType } from '../../entities/coupon.entity';
 import { CouponUsage } from '../../entities/coupon-usage.entity';
 import { CoverFinish } from '../../entities/cover-finish.entity';
-import { CoverRate } from '../../entities/cover-rate.entity';
+import { CoverFinishRate } from '../../entities/cover-finish-rate.entity';
 import { CoverStyle } from '../../entities/cover-style.entity';
+import { CoverStyleRate } from '../../entities/cover-style-rate.entity';
 import { PageRate } from '../../entities/page-rate.entity';
 import { PaperStock } from '../../entities/paper-stock.entity';
 import { PrintType } from '../../entities/print-type.entity';
@@ -29,12 +30,14 @@ export interface CouponValidationResult {
 @Injectable()
 export class QuoterService {
   constructor(
-    @InjectRepository(PageRate) private pageRateRepo: Repository<PageRate>,
-    @InjectRepository(CoverRate) private coverRateRepo: Repository<CoverRate>,
-    @InjectRepository(BindingRate) private bindingRateRepo: Repository<BindingRate>,
-    @InjectRepository(Quote) private quoteRepo: Repository<Quote>,
-    @InjectRepository(Coupon) private couponRepo: Repository<Coupon>,
-    @InjectRepository(CouponUsage) private couponUsageRepo: Repository<CouponUsage>,
+    @InjectRepository(TrimSize)        private trimSizeRepo:        Repository<TrimSize>,
+    @InjectRepository(PageRate)        private pageRateRepo:        Repository<PageRate>,
+    @InjectRepository(CoverStyleRate)  private coverStyleRateRepo:  Repository<CoverStyleRate>,
+    @InjectRepository(CoverFinishRate) private coverFinishRateRepo: Repository<CoverFinishRate>,
+    @InjectRepository(BindingRate)     private bindingRateRepo:     Repository<BindingRate>,
+    @InjectRepository(Quote)           private quoteRepo:           Repository<Quote>,
+    @InjectRepository(Coupon)          private couponRepo:          Repository<Coupon>,
+    @InjectRepository(CouponUsage)     private couponUsageRepo:     Repository<CouponUsage>,
   ) {}
 
   /**
@@ -44,45 +47,40 @@ export class QuoterService {
    * @throws NotFoundException if any required rate record is missing
    */
   async calculatePrice(dto: CalculateQuoteDto): Promise<PriceBreakdown> {
-    const pageRate = await this.pageRateRepo.findOne({
-      where: {
-        printType: { id: dto.printTypeId },
-        paperStock: { id: dto.paperStockId },
-      },
-    });
-    if (!pageRate) {
-      throw new NotFoundException(
-        `No page rate found for printTypeId=${dto.printTypeId}, paperStockId=${dto.paperStockId}`,
-      );
-    }
+    const trimSize = await this.trimSizeRepo.findOneBy({ id: dto.trimSizeId });
+    if (!trimSize) throw new NotFoundException(`TrimSize ${dto.trimSizeId} not found`);
 
-    const coverRate = await this.coverRateRepo.findOne({
-      where: {
-        coverStyle: { id: dto.coverStyleId },
-        coverFinish: { id: dto.coverFinishId },
-      },
+    const pageRate = await this.pageRateRepo.findOne({
+      where: { printType: { id: dto.printTypeId }, paperStock: { id: dto.paperStockId } },
     });
-    if (!coverRate) {
-      throw new NotFoundException(
-        `No cover rate found for coverStyleId=${dto.coverStyleId}, coverFinishId=${dto.coverFinishId}`,
-      );
-    }
+    if (!pageRate) throw new NotFoundException(`No page rate for printType=${dto.printTypeId}, paperStock=${dto.paperStockId}`);
+
+    const coverStyleRate = await this.coverStyleRateRepo.findOne({
+      where: { coverStyle: { id: dto.coverStyleId } },
+    });
+    if (!coverStyleRate) throw new NotFoundException(`No cover style rate for coverStyle=${dto.coverStyleId}`);
+
+    const coverFinishRate = await this.coverFinishRateRepo.findOne({
+      where: { coverFinish: { id: dto.coverFinishId } },
+    });
+    if (!coverFinishRate) throw new NotFoundException(`No cover finish rate for coverFinish=${dto.coverFinishId}`);
 
     const bindingRate = await this.bindingRateRepo.findOne({
       where: { bindingType: { id: dto.bindingTypeId } },
     });
-    if (!bindingRate) {
-      throw new NotFoundException(`No binding rate found for bindingTypeId=${dto.bindingTypeId}`);
-    }
+    if (!bindingRate) throw new NotFoundException(`No binding rate for bindingType=${dto.bindingTypeId}`);
 
-    const pageCost = Math.round(Number(pageRate.ratePerPage) * dto.pageCount * 100) / 100;
-    const coverCost = Math.round(Number(coverRate.basePrice) * 100) / 100;
-    const bindingCost = Math.round(Number(bindingRate.surcharge) * 100) / 100;
-    const subtotal = Math.round((pageCost + coverCost + bindingCost) * dto.quantity * 100) / 100;
-    const tax = Math.round(subtotal * 0.08 * 100) / 100;
-    const total = Math.round((subtotal + tax) * 100) / 100;
+    const multiplier = Number(trimSize.pricingMultiplier) || 1;
+    const pageCost       = Math.round(Number(pageRate.ratePerPage) * dto.pageCount * multiplier * 100) / 100;
+    const coverStyleCost = Math.round(Number(coverStyleRate.basePrice) * 100) / 100;
+    const coverFinishCost = Math.round(Number(coverFinishRate.addOnPrice) * 100) / 100;
+    const coverCost      = Math.round((coverStyleCost + coverFinishCost) * 100) / 100;
+    const bindingCost    = Math.round(Number(bindingRate.surcharge) * 100) / 100;
+    const subtotal       = Math.round((pageCost + coverCost + bindingCost) * dto.quantity * 100) / 100;
+    const tax            = Math.round(subtotal * 0.08 * 100) / 100;
+    const total          = Math.round((subtotal + tax) * 100) / 100;
 
-    return { pageCost, coverCost, bindingCost, subtotal, tax, total };
+    return { pageCost, coverStyleCost, coverFinishCost, coverCost, bindingCost, subtotal, tax, total };
   }
 
   /**

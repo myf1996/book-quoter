@@ -5,6 +5,8 @@ import { useQuoteStore } from '@/stores/quote.store'
 /** Full price breakdown returned by POST /api/quoter/calculate */
 export interface PriceBreakdown {
   pageCost: number
+  coverStyleCost: number
+  coverFinishCost: number
   coverCost: number
   bindingCost: number
   subtotal: number

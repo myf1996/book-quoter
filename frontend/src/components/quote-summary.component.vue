@@ -15,8 +15,11 @@ const quoteStore = useQuoteStore()
 const authStore = useAuthStore()
 const { priceBreakdown, isCalculating, priceError } = useQuotePrice()
 const {
+  trimMultiplier,
+  pageRatePerPage,
   pageRatePerCopy,
-  coverBasePrice,
+  coverStylePrice,
+  coverFinishPrice,
   bindingSurcharge,
   estimatedPerCopy,
   estimatedTotal,
@@ -156,22 +159,22 @@ function formatPrice(value: number): string {
 </script>
 
 <template>
-  <div class="bg-gray-50 rounded-xl p-6 border border-gray-200">
-    <h3 class="text-lg font-semibold text-gray-900 mb-4">Quote Summary</h3>
+  <div class="bg-gray-50 rounded-xl p-4 border border-gray-200">
+    <h3 class="text-base font-semibold text-gray-900 mb-3">Quote Summary</h3>
 
     <!-- Selections — each row navigates to its step on click -->
-    <div class="space-y-1">
+    <div class="space-y-0.5">
       <button
         v-for="row in summaryRows"
         :key="row.key"
-        class="w-full flex items-center justify-between gap-2 text-sm py-1.5 px-2 rounded-lg -mx-2 transition-colors group"
+        class="w-full flex items-center justify-between gap-2 text-xs py-1 px-2 rounded-lg -mx-2 transition-colors group"
         :class="quoteStore.quoteState[row.key]
           ? 'hover:bg-white cursor-pointer'
           : 'cursor-default'"
         :title="quoteStore.quoteState[row.key] ? `Edit ${row.label}` : ''"
         @click="quoteStore.quoteState[row.key] ? quoteStore.goToStep(row.step) : undefined"
       >
-        <span class="text-gray-500 flex items-center gap-1 flex-shrink-0">
+        <span class="text-gray-500 flex items-center gap-1 flex-shrink-0 whitespace-nowrap min-w-[5.5rem]">
           {{ row.label }}
           <svg
             v-if="quoteStore.quoteState[row.key]"
@@ -181,28 +184,63 @@ function formatPrice(value: number): string {
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536M9 11l6-6 3 3-6 6H9v-3z"/>
           </svg>
         </span>
-        <span
-          v-if="quoteStore.quoteState[row.key]"
-          class="font-medium text-gray-900 group-hover:text-indigo-700 transition-colors text-right"
-        >
-          {{ labels[row.map][quoteStore.quoteState[row.key]!] }}
-        </span>
+        <!-- Value: name + inline price badge on one line -->
+        <div v-if="quoteStore.quoteState[row.key]" class="flex items-center justify-end gap-1.5 min-w-0 flex-shrink">
+          <span class="font-medium text-gray-900 group-hover:text-indigo-700 transition-colors whitespace-nowrap">
+            {{ labels[row.map][quoteStore.quoteState[row.key]!] }}
+          </span>
+          <!-- Trim size rate badge -->
+          <span
+            v-if="row.key === 'trimSizeId' && quoteStore.quoteState.trimSizeId"
+            class="text-xs font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0 whitespace-nowrap"
+            :class="trimMultiplier === 1 ? 'text-gray-500 bg-gray-100' : trimMultiplier < 1 ? 'text-green-700 bg-green-100' : 'text-amber-700 bg-amber-100'"
+          >
+            <template v-if="trimMultiplier === 1">std</template>
+            <template v-else-if="trimMultiplier < 1">−{{ Math.round((1 - trimMultiplier) * 100) }}%</template>
+            <template v-else>+{{ Math.round((trimMultiplier - 1) * 100) }}%</template>
+          </span>
+          <!-- Cover Style price badge -->
+          <span
+            v-else-if="row.key === 'coverStyleId' && coverStylePrice !== null"
+            class="text-xs font-medium text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded-full flex-shrink-0 whitespace-nowrap"
+          >{{ formatPrice(coverStylePrice) }}</span>
+          <!-- Cover Finish add-on badge -->
+          <span
+            v-else-if="row.key === 'coverFinishId' && coverFinishPrice !== null"
+            class="text-xs font-medium text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded-full flex-shrink-0 whitespace-nowrap"
+          >+{{ formatPrice(coverFinishPrice) }}</span>
+          <!-- Print Type $/page badge -->
+          <span
+            v-else-if="row.key === 'printTypeId' && pageRatePerPage !== null"
+            class="text-xs font-medium text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded-full flex-shrink-0 whitespace-nowrap"
+          >${{ pageRatePerPage.toFixed(4) }}/pg</span>
+          <!-- Paper Stock cost-per-copy badge -->
+          <span
+            v-else-if="row.key === 'paperStockId' && pageRatePerCopy !== null"
+            class="text-xs font-medium text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded-full flex-shrink-0 whitespace-nowrap"
+          >{{ formatPrice(pageRatePerCopy) }}/copy</span>
+          <!-- Binding surcharge badge -->
+          <span
+            v-else-if="row.key === 'bindingTypeId' && bindingSurcharge !== null"
+            class="text-xs font-medium text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded-full flex-shrink-0 whitespace-nowrap"
+          >{{ formatPrice(bindingSurcharge) }}/copy</span>
+        </div>
         <span v-else class="text-gray-300 italic whitespace-nowrap">Not selected</span>
       </button>
 
       <!-- Page count row -->
       <button
-        class="w-full flex items-center justify-between gap-2 text-sm py-1.5 px-2 rounded-lg -mx-2 transition-colors group"
+        class="w-full flex items-center justify-between gap-2 text-xs py-1 px-2 rounded-lg -mx-2 transition-colors group"
         :class="quoteStore.quoteState.pageCount !== null ? 'hover:bg-white cursor-pointer' : 'cursor-default'"
         @click="quoteStore.quoteState.pageCount !== null ? quoteStore.goToStep(1) : undefined"
       >
-        <span class="text-gray-500 flex items-center gap-1 flex-shrink-0">
+        <span class="text-gray-500 flex items-center gap-1 flex-shrink-0 whitespace-nowrap">
           Pages
           <svg v-if="quoteStore.quoteState.pageCount !== null" class="w-3 h-3 text-gray-300 group-hover:text-indigo-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536M9 11l6-6 3 3-6 6H9v-3z"/>
           </svg>
         </span>
-        <span v-if="quoteStore.quoteState.pageCount !== null" class="font-medium text-gray-900 group-hover:text-indigo-700 transition-colors text-right">
+        <span v-if="quoteStore.quoteState.pageCount !== null" class="font-medium text-gray-900 group-hover:text-indigo-700 transition-colors whitespace-nowrap">
           {{ quoteStore.quoteState.pageCount }}
         </span>
         <span v-else class="text-gray-300 italic whitespace-nowrap">Not entered</span>
@@ -210,17 +248,17 @@ function formatPrice(value: number): string {
 
       <!-- Quantity row -->
       <button
-        class="w-full flex items-center justify-between gap-2 text-sm py-1.5 px-2 rounded-lg -mx-2 transition-colors group"
+        class="w-full flex items-center justify-between gap-2 text-xs py-1 px-2 rounded-lg -mx-2 transition-colors group"
         :class="quoteStore.quoteState.quantity !== null ? 'hover:bg-white cursor-pointer' : 'cursor-default'"
         @click="quoteStore.quoteState.quantity !== null ? quoteStore.goToStep(7) : undefined"
       >
-        <span class="text-gray-500 flex items-center gap-1 flex-shrink-0">
+        <span class="text-gray-500 flex items-center gap-1 flex-shrink-0 whitespace-nowrap">
           Quantity
           <svg v-if="quoteStore.quoteState.quantity !== null" class="w-3 h-3 text-gray-300 group-hover:text-indigo-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536M9 11l6-6 3 3-6 6H9v-3z"/>
           </svg>
         </span>
-        <span v-if="quoteStore.quoteState.quantity !== null" class="font-medium text-gray-900 group-hover:text-indigo-700 transition-colors text-right">
+        <span v-if="quoteStore.quoteState.quantity !== null" class="font-medium text-gray-900 group-hover:text-indigo-700 transition-colors whitespace-nowrap">
           {{ quoteStore.quoteState.quantity.toLocaleString() }}
         </span>
         <span v-else class="text-gray-300 italic whitespace-nowrap">Not selected</span>
@@ -229,16 +267,16 @@ function formatPrice(value: number): string {
       <!-- Production time row (always shown after quantity step) -->
       <div v-if="quoteStore.quoteState.quantity !== null" class="border-t border-gray-100 pt-1 mt-1">
         <button
-          class="w-full flex items-center justify-between gap-2 text-sm py-1.5 px-2 rounded-lg -mx-2 hover:bg-white transition-colors group cursor-pointer"
+          class="w-full flex items-center justify-between gap-2 text-xs py-1 px-2 rounded-lg -mx-2 hover:bg-white transition-colors group cursor-pointer"
           @click="quoteStore.goToStep(7)"
         >
-          <span class="text-gray-500 flex items-center gap-1 flex-shrink-0">
+          <span class="text-gray-500 flex items-center gap-1 flex-shrink-0 whitespace-nowrap">
             Production
             <svg class="w-3 h-3 text-gray-300 group-hover:text-indigo-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536M9 11l6-6 3 3-6 6H9v-3z"/>
             </svg>
           </span>
-          <span class="font-medium text-gray-900 group-hover:text-indigo-700 transition-colors text-right">{{ productionLabel }}</span>
+          <span class="font-medium text-gray-900 group-hover:text-indigo-700 transition-colors whitespace-nowrap">{{ productionLabel }}</span>
         </button>
 
         <!-- Ship date banner -->
@@ -264,19 +302,29 @@ function formatPrice(value: number): string {
         <p v-else-if="priceError" class="text-sm text-red-500">{{ priceError }}</p>
         <div v-else-if="priceBreakdown" class="space-y-2 text-sm">
           <div class="flex justify-between">
-            <span class="text-gray-500">Page Printing</span>
+            <span class="text-gray-500">Interior Pages</span>
             <span class="text-gray-800">{{ formatPrice(priceBreakdown.pageCost) }}</span>
           </div>
           <div class="flex justify-between">
-            <span class="text-gray-500">Cover</span>
-            <span class="text-gray-800">{{ formatPrice(priceBreakdown.coverCost) }}</span>
+            <span class="text-gray-500">Cover Style</span>
+            <span class="text-gray-800">{{ formatPrice(priceBreakdown.coverStyleCost) }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-500">Cover Finish</span>
+            <span class="text-gray-800">{{ formatPrice(priceBreakdown.coverFinishCost) }}</span>
           </div>
           <div class="flex justify-between">
             <span class="text-gray-500">Binding</span>
             <span class="text-gray-800">{{ formatPrice(priceBreakdown.bindingCost) }}</span>
           </div>
           <div class="flex justify-between border-t border-gray-100 pt-2">
-            <span class="text-gray-500">Subtotal</span>
+            <span class="text-gray-500">Per copy</span>
+            <span class="text-gray-800 font-medium">
+              {{ formatPrice(priceBreakdown.pageCost + priceBreakdown.coverStyleCost + priceBreakdown.coverFinishCost + priceBreakdown.bindingCost) }}
+            </span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-500">× {{ quoteStore.quoteState.quantity?.toLocaleString() }} copies</span>
             <span class="text-gray-800">{{ formatPrice(priceBreakdown.subtotal) }}</span>
           </div>
           <div class="flex justify-between">
@@ -294,74 +342,40 @@ function formatPrice(value: number): string {
             </span>
             <span>−{{ formatPrice(discountAmount) }}</span>
           </div>
-          <div class="flex justify-between pt-2 border-t border-gray-300 font-semibold">
-            <span class="text-gray-900">Total</span>
-            <span class="text-indigo-700 text-base">{{ formatPrice(finalTotal) }}</span>
+          <div class="flex justify-between pt-2 border-t border-gray-300">
+            <div>
+              <p class="font-semibold text-gray-900">Total</p>
+              <p class="text-xs text-gray-400">
+                {{ formatPrice(finalTotal / (quoteStore.quoteState.quantity ?? 1)) }} / copy
+              </p>
+            </div>
+            <span class="font-bold text-indigo-700 text-lg self-center">{{ formatPrice(finalTotal) }}</span>
           </div>
-          <p v-if="quoteStore.quoteState.quantity" class="text-xs text-gray-400 text-right">
-            {{ formatPrice(finalTotal / quoteStore.quoteState.quantity) }} per copy
-          </p>
         </div>
       </template>
 
-      <!-- Partial estimate — live, client-side, shown while steps are in progress -->
+      <!-- Partial running total — shown while steps are still in progress -->
       <template v-else-if="hasAnyEstimate">
-        <div class="space-y-2 text-sm">
-          <!-- Per-copy page cost -->
-          <div v-if="pageRatePerCopy !== null" class="flex justify-between">
-            <span class="text-gray-500">Page Printing</span>
-            <span class="text-gray-700">{{ formatPrice(pageRatePerCopy) }} / copy</span>
+        <div class="space-y-1.5 text-sm">
+          <div v-if="estimatedPerCopy !== null" class="flex justify-between">
+            <span class="text-gray-500">Est. per copy</span>
+            <span class="text-gray-700 font-medium">~{{ formatPrice(estimatedPerCopy) }}</span>
           </div>
-          <div v-else class="flex justify-between opacity-40">
-            <span class="text-gray-400">Page Printing</span>
-            <span class="text-gray-400 italic text-xs">select print type + paper</span>
-          </div>
-
-          <!-- Per-copy cover cost -->
-          <div v-if="coverBasePrice !== null" class="flex justify-between">
-            <span class="text-gray-500">Cover</span>
-            <span class="text-gray-700">{{ formatPrice(coverBasePrice) }} / copy</span>
-          </div>
-          <div v-else class="flex justify-between opacity-40">
-            <span class="text-gray-400">Cover</span>
-            <span class="text-gray-400 italic text-xs">select style + finish</span>
-          </div>
-
-          <!-- Per-copy binding cost -->
-          <div v-if="bindingSurcharge !== null" class="flex justify-between">
-            <span class="text-gray-500">Binding</span>
-            <span class="text-gray-700">{{ formatPrice(bindingSurcharge) }} / copy</span>
-          </div>
-          <div v-else class="flex justify-between opacity-40">
-            <span class="text-gray-400">Binding</span>
-            <span class="text-gray-400 italic text-xs">select binding type</span>
-          </div>
-
-          <!-- Running per-copy total -->
-          <div v-if="estimatedPerCopy !== null" class="flex justify-between border-t border-gray-100 pt-2 font-medium">
-            <span class="text-gray-600">Est. per copy</span>
-            <span class="text-gray-800">~{{ formatPrice(estimatedPerCopy) }}</span>
-          </div>
-
-          <!-- Estimated total (qty × per-copy × tax) -->
-          <div v-if="estimatedTotal !== null" class="flex justify-between font-semibold">
+          <div v-if="estimatedTotal !== null" class="flex justify-between font-semibold border-t border-gray-100 pt-1.5">
             <span class="text-gray-700">
               Est. total
-              <span class="font-normal text-xs text-gray-400">({{ quoteStore.quoteState.quantity?.toLocaleString() }} copies + tax)</span>
+              <span class="text-xs font-normal text-gray-400">(incl. tax)</span>
             </span>
-            <span class="text-indigo-600 text-base">~{{ formatPrice(estimatedTotal) }}</span>
+            <span class="text-indigo-600">~{{ formatPrice(estimatedTotal) }}</span>
           </div>
           <p v-else-if="estimatedPerCopy !== null" class="text-xs text-gray-400 italic text-right">
-            Select quantity for total estimate
+            Select quantity for total
           </p>
         </div>
-
-        <p class="text-xs text-gray-400 mt-3 text-center">
-          ~ Estimate — exact price confirmed on last step
-        </p>
+        <p class="text-xs text-gray-400 mt-2 text-center">~ Estimate · confirmed on last step</p>
       </template>
 
-      <!-- Nothing selected yet -->
+      <!-- Nothing computable yet -->
       <template v-else>
         <p class="text-xs text-gray-400 italic text-center py-2">
           Select options to see a live price estimate

@@ -38,6 +38,13 @@ export class UpdateProductDto extends PartialType(CreateProductDto) {
   @Type(() => Number)
   maxPages?: number;
 
+  /** TrimSize: page size pricing multiplier (e.g. 0.90 for Digest, 1.40 for Large 8.5×11) */
+  @IsOptional()
+  @IsNumber()
+  @Min(0.1)
+  @Type(() => Number)
+  pricingMultiplier?: number;
+
   /** PaperStock: paper weight label (e.g. "60lb") */
   @IsOptional()
   @IsString()

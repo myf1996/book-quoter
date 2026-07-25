@@ -136,8 +136,8 @@ async function saveQuote(): Promise<void> {
         </div>
 
         <!-- Sidebar summary -->
-        <div class="lg:w-72 border-t lg:border-t-0 lg:border-l border-gray-100 p-6 bg-gray-50">
-          <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">Your Selection</h3>
+        <div class="lg:w-80 border-t lg:border-t-0 lg:border-l border-gray-100 p-4 bg-gray-50">
+          <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">Your Selection</h3>
           <QuoteSummary />
         </div>
       </div>

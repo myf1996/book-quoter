@@ -5,8 +5,9 @@ import { ProductStatus } from '../common/enums/product-status.enum';
 import { BindingRate } from '../entities/binding-rate.entity';
 import { BindingType } from '../entities/binding-type.entity';
 import { CoverFinish } from '../entities/cover-finish.entity';
-import { CoverRate } from '../entities/cover-rate.entity';
+import { CoverFinishRate } from '../entities/cover-finish-rate.entity';
 import { CoverStyle } from '../entities/cover-style.entity';
+import { CoverStyleRate } from '../entities/cover-style-rate.entity';
 import { PageRate } from '../entities/page-rate.entity';
 import { PaperStock } from '../entities/paper-stock.entity';
 import { PrintType } from '../entities/print-type.entity';
@@ -19,20 +20,21 @@ const ACTIVE = ProductStatus.ACTIVE;
  * Upserts all product-catalog defaults so deployments are self-healing —
  * no manual seed command needed after schema changes.
  *
- * Pricing rates are only inserted when missing so admin edits are preserved.
+ * Pricing rates are only inserted when missing so admin edits are never overwritten.
  */
 @Injectable()
 export class DatabaseInitService implements OnApplicationBootstrap {
   constructor(
-    @InjectRepository(TrimSize)     private trimSizeRepo:    Repository<TrimSize>,
-    @InjectRepository(CoverStyle)   private coverStyleRepo:  Repository<CoverStyle>,
-    @InjectRepository(CoverFinish)  private coverFinishRepo: Repository<CoverFinish>,
-    @InjectRepository(PrintType)    private printTypeRepo:   Repository<PrintType>,
-    @InjectRepository(PaperStock)   private paperStockRepo:  Repository<PaperStock>,
-    @InjectRepository(BindingType)  private bindingTypeRepo: Repository<BindingType>,
-    @InjectRepository(PageRate)     private pageRateRepo:    Repository<PageRate>,
-    @InjectRepository(CoverRate)    private coverRateRepo:   Repository<CoverRate>,
-    @InjectRepository(BindingRate)  private bindingRateRepo: Repository<BindingRate>,
+    @InjectRepository(TrimSize)       private trimSizeRepo:       Repository<TrimSize>,
+    @InjectRepository(CoverStyle)     private coverStyleRepo:     Repository<CoverStyle>,
+    @InjectRepository(CoverFinish)    private coverFinishRepo:    Repository<CoverFinish>,
+    @InjectRepository(PrintType)      private printTypeRepo:      Repository<PrintType>,
+    @InjectRepository(PaperStock)     private paperStockRepo:     Repository<PaperStock>,
+    @InjectRepository(BindingType)    private bindingTypeRepo:    Repository<BindingType>,
+    @InjectRepository(PageRate)       private pageRateRepo:       Repository<PageRate>,
+    @InjectRepository(CoverStyleRate) private coverStyleRateRepo: Repository<CoverStyleRate>,
+    @InjectRepository(CoverFinishRate) private coverFinishRateRepo: Repository<CoverFinishRate>,
+    @InjectRepository(BindingRate)    private bindingRateRepo:    Repository<BindingRate>,
   ) {}
 
   async onApplicationBootstrap(): Promise<void> {
@@ -41,7 +43,6 @@ export class DatabaseInitService implements OnApplicationBootstrap {
       await this.seedPricingRates();
       console.warn('[DatabaseInit] Bootstrap complete.');
     } catch (err) {
-      // Log but never crash the server — missing catalog data is recoverable.
       console.error('[DatabaseInit] Bootstrap failed — server is running but data may be incomplete:', err);
     }
   }
@@ -50,11 +51,11 @@ export class DatabaseInitService implements OnApplicationBootstrap {
 
   private async seedCatalog(): Promise<void> {
     await this.trimSizeRepo.upsert([
-      { name: 'Digest 5.5×8.5', width: 5.5, height: 8.5,  minPages: 24, maxPages: 840, status: ACTIVE },
-      { name: 'Trade 6×9',      width: 6.0, height: 9.0,  minPages: 24, maxPages: 840, status: ACTIVE },
-      { name: 'Large 8.5×11',   width: 8.5, height: 11.0, minPages: 24, maxPages: 600, status: ACTIVE },
-      { name: 'Hardcover 6×9',  width: 6.0, height: 9.0,  minPages: 48, maxPages: 600, status: ACTIVE },
-      { name: 'Square 8×8',     width: 8.0, height: 8.0,  minPages: 24, maxPages: 400, status: ACTIVE },
+      { name: 'Digest 5.5×8.5', width: 5.5,  height: 8.5,  minPages: 24, maxPages: 840, pricingMultiplier: 0.90, status: ACTIVE },
+      { name: 'Trade 6×9',      width: 6.0,  height: 9.0,  minPages: 24, maxPages: 840, pricingMultiplier: 1.00, status: ACTIVE },
+      { name: 'Square 8×8',     width: 8.0,  height: 8.0,  minPages: 24, maxPages: 400, pricingMultiplier: 1.10, status: ACTIVE },
+      { name: 'Large 8.5×11',   width: 8.5,  height: 11.0, minPages: 24, maxPages: 600, pricingMultiplier: 1.40, status: ACTIVE },
+      { name: 'Hardcover 6×9',  width: 6.0,  height: 9.0,  minPages: 48, maxPages: 600, pricingMultiplier: 1.00, status: ACTIVE },
     ], ['name']);
 
     await this.coverStyleRepo.upsert([
@@ -129,18 +130,29 @@ export class DatabaseInitService implements OnApplicationBootstrap {
       this.coverFinishRepo.findOneByOrFail({ name: 'Textured' }),
     ]);
 
-    const coverRates: [CoverStyle, CoverFinish, number][] = [
-      [soft, gloss,     3.50], [soft, matte,     4.00], [soft, textured,  4.75],
-      [hard, gloss,     8.00], [hard, matte,     8.50], [hard, textured,  9.25],
-      [dust, gloss,    10.00], [dust, matte,    10.50], [dust, textured, 11.25],
+    // Cover style base prices
+    const styleRates: [CoverStyle, number][] = [
+      [soft, 2.50],
+      [hard, 7.00],
+      [dust, 9.00],
     ];
-    for (const [cs, cf, price] of coverRates) {
-      const exists = await this.coverRateRepo.findOneBy({
-        coverStyle: { id: cs.id },
-        coverFinish: { id: cf.id },
-      });
+    for (const [cs, price] of styleRates) {
+      const exists = await this.coverStyleRateRepo.findOneBy({ coverStyle: { id: cs.id } });
       if (!exists) {
-        await this.coverRateRepo.save({ coverStyle: cs, coverFinish: cf, basePrice: price });
+        await this.coverStyleRateRepo.save({ coverStyle: cs, basePrice: price });
+      }
+    }
+
+    // Cover finish add-on prices
+    const finishRates: [CoverFinish, number][] = [
+      [gloss,    1.50],
+      [matte,    2.00],
+      [textured, 2.75],
+    ];
+    for (const [cf, price] of finishRates) {
+      const exists = await this.coverFinishRateRepo.findOneBy({ coverFinish: { id: cf.id } });
+      if (!exists) {
+        await this.coverFinishRateRepo.save({ coverFinish: cf, addOnPrice: price });
       }
     }
 

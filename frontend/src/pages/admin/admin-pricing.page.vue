@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * AdminPricingPage — manage page rates, cover rates, and binding rates.
+ * AdminPricingPage — manage page rates, cover style rates, cover finish rates, and binding rates.
  */
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
@@ -8,51 +8,23 @@ import { useAuthStore } from '@/stores/auth.store'
 import AdminLayout from '@/components/admin-layout.component.vue'
 import { api } from '@/utils/helpers.utils'
 
-// ---- Shared product option type ----
-interface ProductOption {
-  id: string
-  name: string
-}
+interface ProductOption { id: string; name: string }
 
 // ---- Page Rates ----
-interface PageRate {
-  id: string
-  printType: ProductOption
-  paperStock: ProductOption
-  ratePerPage: number
-}
+interface PageRate { id: string; printType: ProductOption; paperStock: ProductOption; ratePerPage: number }
+interface PageRatePayload { printTypeId: string; paperStockId: string; ratePerPage: number }
 
-interface PageRatePayload {
-  printTypeId: string
-  paperStockId: string
-  ratePerPage: number
-}
+// ---- Cover Style Rates ----
+interface CoverStyleRate { id: string; coverStyle: ProductOption; basePrice: number }
+interface CoverStyleRatePayload { coverStyleId: string; basePrice: number }
 
-// ---- Cover Rates ----
-interface CoverRate {
-  id: string
-  coverStyle: ProductOption
-  coverFinish: ProductOption
-  basePrice: number
-}
-
-interface CoverRatePayload {
-  coverStyleId: string
-  coverFinishId: string
-  basePrice: number
-}
+// ---- Cover Finish Rates ----
+interface CoverFinishRate { id: string; coverFinish: ProductOption; addOnPrice: number }
+interface CoverFinishRatePayload { coverFinishId: string; addOnPrice: number }
 
 // ---- Binding Rates ----
-interface BindingRate {
-  id: string
-  bindingType: ProductOption
-  surcharge: number
-}
-
-interface BindingRatePayload {
-  bindingTypeId: string
-  surcharge: number
-}
+interface BindingRate { id: string; bindingType: ProductOption; surcharge: number }
+interface BindingRatePayload { bindingTypeId: string; surcharge: number }
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -73,14 +45,23 @@ const editingPageRateId = ref<string | null>(null)
 const pageRateForm = ref<PageRatePayload>({ printTypeId: '', paperStockId: '', ratePerPage: 0 })
 const pageRateSaving = ref(false)
 
-// Cover Rates state
-const coverRates = ref<CoverRate[]>([])
-const coverRatesLoading = ref(false)
-const coverRatesError = ref<string | null>(null)
-const showAddCoverRate = ref(false)
-const editingCoverRateId = ref<string | null>(null)
-const coverRateForm = ref<CoverRatePayload>({ coverStyleId: '', coverFinishId: '', basePrice: 0 })
-const coverRateSaving = ref(false)
+// Cover Style Rates state
+const coverStyleRates = ref<CoverStyleRate[]>([])
+const coverStyleRatesLoading = ref(false)
+const coverStyleRatesError = ref<string | null>(null)
+const showAddCoverStyleRate = ref(false)
+const editingCoverStyleRateId = ref<string | null>(null)
+const coverStyleRateForm = ref<CoverStyleRatePayload>({ coverStyleId: '', basePrice: 0 })
+const coverStyleRateSaving = ref(false)
+
+// Cover Finish Rates state
+const coverFinishRates = ref<CoverFinishRate[]>([])
+const coverFinishRatesLoading = ref(false)
+const coverFinishRatesError = ref<string | null>(null)
+const showAddCoverFinishRate = ref(false)
+const editingCoverFinishRateId = ref<string | null>(null)
+const coverFinishRateForm = ref<CoverFinishRatePayload>({ coverFinishId: '', addOnPrice: 0 })
+const coverFinishRateSaving = ref(false)
 
 // Binding Rates state
 const bindingRates = ref<BindingRate[]>([])
@@ -110,7 +91,7 @@ async function loadAll(): Promise<void> {
     // Non-fatal — dropdowns will be empty
   }
 
-  await Promise.all([loadPageRates(), loadCoverRates(), loadBindingRates()])
+  await Promise.all([loadPageRates(), loadCoverStyleRates(), loadCoverFinishRates(), loadBindingRates()])
 }
 
 // ---- Page Rates CRUD ----
@@ -127,22 +108,14 @@ async function loadPageRates(): Promise<void> {
   }
 }
 
-function resetPageRateForm(): void {
-  pageRateForm.value = { printTypeId: '', paperStockId: '', ratePerPage: 0 }
-}
-
 function startAddPageRate(): void {
-  resetPageRateForm()
+  pageRateForm.value = { printTypeId: '', paperStockId: '', ratePerPage: 0 }
   editingPageRateId.value = null
   showAddPageRate.value = true
 }
 
 function startEditPageRate(rate: PageRate): void {
-  pageRateForm.value = {
-    printTypeId: rate.printType.id,
-    paperStockId: rate.paperStock.id,
-    ratePerPage: rate.ratePerPage,
-  }
+  pageRateForm.value = { printTypeId: rate.printType.id, paperStockId: rate.paperStock.id, ratePerPage: rate.ratePerPage }
   editingPageRateId.value = rate.id
   showAddPageRate.value = false
 }
@@ -150,7 +123,6 @@ function startEditPageRate(rate: PageRate): void {
 function cancelPageRate(): void {
   showAddPageRate.value = false
   editingPageRateId.value = null
-  resetPageRateForm()
   pageRatesError.value = null
 }
 
@@ -183,73 +155,125 @@ async function deletePageRate(id: string): Promise<void> {
   }
 }
 
-// ---- Cover Rates CRUD ----
-async function loadCoverRates(): Promise<void> {
-  coverRatesLoading.value = true
-  coverRatesError.value = null
+// ---- Cover Style Rates CRUD ----
+async function loadCoverStyleRates(): Promise<void> {
+  coverStyleRatesLoading.value = true
+  coverStyleRatesError.value = null
   try {
-    const { data } = await api.get<CoverRate[]>('/admin/cover-rates')
-    coverRates.value = data
+    const { data } = await api.get<CoverStyleRate[]>('/admin/cover-style-rates')
+    coverStyleRates.value = data
   } catch {
-    coverRatesError.value = 'Failed to load cover rates.'
+    coverStyleRatesError.value = 'Failed to load cover style rates.'
   } finally {
-    coverRatesLoading.value = false
+    coverStyleRatesLoading.value = false
   }
 }
 
-function resetCoverRateForm(): void {
-  coverRateForm.value = { coverStyleId: '', coverFinishId: '', basePrice: 0 }
+function startAddCoverStyleRate(): void {
+  coverStyleRateForm.value = { coverStyleId: '', basePrice: 0 }
+  editingCoverStyleRateId.value = null
+  showAddCoverStyleRate.value = true
 }
 
-function startAddCoverRate(): void {
-  resetCoverRateForm()
-  editingCoverRateId.value = null
-  showAddCoverRate.value = true
+function startEditCoverStyleRate(rate: CoverStyleRate): void {
+  coverStyleRateForm.value = { coverStyleId: rate.coverStyle.id, basePrice: rate.basePrice }
+  editingCoverStyleRateId.value = rate.id
+  showAddCoverStyleRate.value = false
 }
 
-function startEditCoverRate(rate: CoverRate): void {
-  coverRateForm.value = {
-    coverStyleId: rate.coverStyle.id,
-    coverFinishId: rate.coverFinish.id,
-    basePrice: rate.basePrice,
-  }
-  editingCoverRateId.value = rate.id
-  showAddCoverRate.value = false
+function cancelCoverStyleRate(): void {
+  showAddCoverStyleRate.value = false
+  editingCoverStyleRateId.value = null
+  coverStyleRatesError.value = null
 }
 
-function cancelCoverRate(): void {
-  showAddCoverRate.value = false
-  editingCoverRateId.value = null
-  resetCoverRateForm()
-  coverRatesError.value = null
-}
-
-async function saveCoverRate(): Promise<void> {
-  coverRateSaving.value = true
-  coverRatesError.value = null
+async function saveCoverStyleRate(): Promise<void> {
+  coverStyleRateSaving.value = true
+  coverStyleRatesError.value = null
   try {
-    if (editingCoverRateId.value !== null) {
-      await api.patch(`/admin/cover-rates/${editingCoverRateId.value}`, coverRateForm.value)
+    if (editingCoverStyleRateId.value !== null) {
+      await api.patch(`/admin/cover-style-rates/${editingCoverStyleRateId.value}`, coverStyleRateForm.value)
     } else {
-      await api.post('/admin/cover-rates', coverRateForm.value)
+      await api.post('/admin/cover-style-rates', coverStyleRateForm.value)
     }
-    cancelCoverRate()
-    await loadCoverRates()
+    cancelCoverStyleRate()
+    await loadCoverStyleRates()
   } catch {
-    coverRatesError.value = 'Failed to save cover rate.'
+    coverStyleRatesError.value = 'Failed to save cover style rate.'
   } finally {
-    coverRateSaving.value = false
+    coverStyleRateSaving.value = false
   }
 }
 
-async function deleteCoverRate(id: string): Promise<void> {
-  if (!window.confirm('Delete this cover rate?')) return
-  coverRatesError.value = null
+async function deleteCoverStyleRate(id: string): Promise<void> {
+  if (!window.confirm('Delete this cover style rate?')) return
+  coverStyleRatesError.value = null
   try {
-    await api.delete(`/admin/cover-rates/${id}`)
-    await loadCoverRates()
+    await api.delete(`/admin/cover-style-rates/${id}`)
+    await loadCoverStyleRates()
   } catch {
-    coverRatesError.value = 'Failed to delete cover rate.'
+    coverStyleRatesError.value = 'Failed to delete cover style rate.'
+  }
+}
+
+// ---- Cover Finish Rates CRUD ----
+async function loadCoverFinishRates(): Promise<void> {
+  coverFinishRatesLoading.value = true
+  coverFinishRatesError.value = null
+  try {
+    const { data } = await api.get<CoverFinishRate[]>('/admin/cover-finish-rates')
+    coverFinishRates.value = data
+  } catch {
+    coverFinishRatesError.value = 'Failed to load cover finish rates.'
+  } finally {
+    coverFinishRatesLoading.value = false
+  }
+}
+
+function startAddCoverFinishRate(): void {
+  coverFinishRateForm.value = { coverFinishId: '', addOnPrice: 0 }
+  editingCoverFinishRateId.value = null
+  showAddCoverFinishRate.value = true
+}
+
+function startEditCoverFinishRate(rate: CoverFinishRate): void {
+  coverFinishRateForm.value = { coverFinishId: rate.coverFinish.id, addOnPrice: rate.addOnPrice }
+  editingCoverFinishRateId.value = rate.id
+  showAddCoverFinishRate.value = false
+}
+
+function cancelCoverFinishRate(): void {
+  showAddCoverFinishRate.value = false
+  editingCoverFinishRateId.value = null
+  coverFinishRatesError.value = null
+}
+
+async function saveCoverFinishRate(): Promise<void> {
+  coverFinishRateSaving.value = true
+  coverFinishRatesError.value = null
+  try {
+    if (editingCoverFinishRateId.value !== null) {
+      await api.patch(`/admin/cover-finish-rates/${editingCoverFinishRateId.value}`, coverFinishRateForm.value)
+    } else {
+      await api.post('/admin/cover-finish-rates', coverFinishRateForm.value)
+    }
+    cancelCoverFinishRate()
+    await loadCoverFinishRates()
+  } catch {
+    coverFinishRatesError.value = 'Failed to save cover finish rate.'
+  } finally {
+    coverFinishRateSaving.value = false
+  }
+}
+
+async function deleteCoverFinishRate(id: string): Promise<void> {
+  if (!window.confirm('Delete this cover finish rate?')) return
+  coverFinishRatesError.value = null
+  try {
+    await api.delete(`/admin/cover-finish-rates/${id}`)
+    await loadCoverFinishRates()
+  } catch {
+    coverFinishRatesError.value = 'Failed to delete cover finish rate.'
   }
 }
 
@@ -267,21 +291,14 @@ async function loadBindingRates(): Promise<void> {
   }
 }
 
-function resetBindingRateForm(): void {
-  bindingRateForm.value = { bindingTypeId: '', surcharge: 0 }
-}
-
 function startAddBindingRate(): void {
-  resetBindingRateForm()
+  bindingRateForm.value = { bindingTypeId: '', surcharge: 0 }
   editingBindingRateId.value = null
   showAddBindingRate.value = true
 }
 
 function startEditBindingRate(rate: BindingRate): void {
-  bindingRateForm.value = {
-    bindingTypeId: rate.bindingType.id,
-    surcharge: rate.surcharge,
-  }
+  bindingRateForm.value = { bindingTypeId: rate.bindingType.id, surcharge: rate.surcharge }
   editingBindingRateId.value = rate.id
   showAddBindingRate.value = false
 }
@@ -289,7 +306,6 @@ function startEditBindingRate(rate: BindingRate): void {
 function cancelBindingRate(): void {
   showAddBindingRate.value = false
   editingBindingRateId.value = null
-  resetBindingRateForm()
   bindingRatesError.value = null
 }
 
@@ -343,23 +359,20 @@ onMounted(async () => {
       <!-- ======== PAGE RATES ======== -->
       <div class="bg-white rounded-2xl shadow-sm border border-gray-100">
         <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h2 class="text-base font-semibold text-gray-900">Page Rates</h2>
+          <div>
+            <h2 class="text-base font-semibold text-gray-900">Page Rates</h2>
+            <p class="text-xs text-gray-400 mt-0.5">Per-page cost by print type × paper stock combination</p>
+          </div>
           <button
             class="px-4 py-1.5 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
             @click="startAddPageRate"
-          >
-            Add
-          </button>
+          >Add</button>
         </div>
 
-        <div
-          v-if="pageRatesError"
-          class="mx-6 mt-4 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600"
-        >
+        <div v-if="pageRatesError" class="mx-6 mt-4 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600">
           {{ pageRatesError }}
         </div>
 
-        <!-- Add / edit form -->
         <div v-if="showAddPageRate || editingPageRateId !== null" class="px-6 py-4 bg-indigo-50 border-b border-gray-100">
           <p class="text-xs font-semibold text-indigo-700 uppercase tracking-wide mb-3">
             {{ editingPageRateId !== null ? 'Edit Page Rate' : 'Add Page Rate' }}
@@ -367,65 +380,41 @@ onMounted(async () => {
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label class="block text-xs text-gray-500 mb-1">Print Type</label>
-              <select
-                v-model="pageRateForm.printTypeId"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              >
-                <option :value="0" disabled>Select...</option>
+              <select v-model="pageRateForm.printTypeId" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <option value="" disabled>Select…</option>
                 <option v-for="pt in printTypes" :key="pt.id" :value="pt.id">{{ pt.name }}</option>
               </select>
             </div>
             <div>
               <label class="block text-xs text-gray-500 mb-1">Paper Stock</label>
-              <select
-                v-model="pageRateForm.paperStockId"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              >
-                <option :value="0" disabled>Select...</option>
+              <select v-model="pageRateForm.paperStockId" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <option value="" disabled>Select…</option>
                 <option v-for="ps in paperStocks" :key="ps.id" :value="ps.id">{{ ps.name }}</option>
               </select>
             </div>
             <div>
               <label class="block text-xs text-gray-500 mb-1">Rate per Page ($)</label>
-              <input
-                v-model.number="pageRateForm.ratePerPage"
-                type="number"
-                min="0"
-                step="0.01"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
+              <input v-model.number="pageRateForm.ratePerPage" type="number" min="0" step="0.001" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
             </div>
           </div>
           <div class="flex gap-2 mt-3">
-            <button
-              :disabled="pageRateSaving || pageRateForm.printTypeId === '' || pageRateForm.paperStockId === ''"
-              class="px-4 py-1.5 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-60"
-              @click="savePageRate"
-            >
+            <button :disabled="pageRateSaving || !pageRateForm.printTypeId || !pageRateForm.paperStockId" class="px-4 py-1.5 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-60" @click="savePageRate">
               {{ pageRateSaving ? 'Saving…' : 'Save' }}
             </button>
-            <button
-              class="px-4 py-1.5 text-sm font-medium text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-              @click="cancelPageRate"
-            >
-              Cancel
-            </button>
+            <button class="px-4 py-1.5 text-sm font-medium text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors" @click="cancelPageRate">Cancel</button>
           </div>
         </div>
 
-        <!-- Loading -->
         <div v-if="pageRatesLoading" class="flex justify-center py-12">
           <svg class="animate-spin h-6 w-6 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
           </svg>
         </div>
-
         <div v-else class="overflow-x-auto">
           <table class="w-full text-sm min-w-[560px]">
             <thead>
               <tr class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-100">
-                <th class="px-6 py-3 w-16 hidden sm:table-cell">ID</th>
                 <th class="px-6 py-3">Print Type</th>
                 <th class="px-6 py-3">Paper Stock</th>
                 <th class="px-6 py-3">Rate/Page</th>
@@ -434,27 +423,16 @@ onMounted(async () => {
             </thead>
             <tbody class="divide-y divide-gray-50">
               <tr v-if="pageRates.length === 0">
-                <td colspan="5" class="px-6 py-8 text-center text-sm text-gray-400">No page rates yet.</td>
+                <td colspan="4" class="px-6 py-8 text-center text-sm text-gray-400">No page rates yet.</td>
               </tr>
               <tr v-for="rate in pageRates" :key="rate.id" class="hover:bg-gray-50 transition-colors">
-                <td class="px-6 py-3 text-gray-400 text-xs font-mono hidden sm:table-cell">{{ rate.id }}</td>
                 <td class="px-6 py-3 text-gray-800">{{ rate.printType.name }}</td>
                 <td class="px-6 py-3 text-gray-800">{{ rate.paperStock.name }}</td>
-                <td class="px-6 py-3 font-medium text-gray-900">{{ formatPrice(rate.ratePerPage) }}/page</td>
+                <td class="px-6 py-3 font-medium text-gray-900">${{ Number(rate.ratePerPage).toFixed(4) }}/page</td>
                 <td class="px-6 py-3 text-right">
                   <div class="flex items-center justify-end gap-2">
-                    <button
-                      class="px-3 py-1 text-xs font-medium text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors"
-                      @click="startEditPageRate(rate)"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      class="px-3 py-1 text-xs font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
-                      @click="deletePageRate(rate.id)"
-                    >
-                      Delete
-                    </button>
+                    <button class="px-3 py-1 text-xs font-medium text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors" @click="startEditPageRate(rate)">Edit</button>
+                    <button class="px-3 py-1 text-xs font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors" @click="deletePageRate(rate.id)">Delete</button>
                   </div>
                 </td>
               </tr>
@@ -463,121 +441,150 @@ onMounted(async () => {
         </div>
       </div>
 
-      <!-- ======== COVER RATES ======== -->
+      <!-- ======== COVER STYLE RATES ======== -->
       <div class="bg-white rounded-2xl shadow-sm border border-gray-100">
         <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h2 class="text-base font-semibold text-gray-900">Cover Rates</h2>
+          <div>
+            <h2 class="text-base font-semibold text-gray-900">Cover Style Rates</h2>
+            <p class="text-xs text-gray-400 mt-0.5">Base per-copy cost by cover style (Softcover, Hardcover, etc.)</p>
+          </div>
           <button
             class="px-4 py-1.5 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-            @click="startAddCoverRate"
-          >
-            Add
-          </button>
+            @click="startAddCoverStyleRate"
+          >Add</button>
         </div>
 
-        <div
-          v-if="coverRatesError"
-          class="mx-6 mt-4 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600"
-        >
-          {{ coverRatesError }}
+        <div v-if="coverStyleRatesError" class="mx-6 mt-4 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600">
+          {{ coverStyleRatesError }}
         </div>
 
-        <!-- Add / edit form -->
-        <div v-if="showAddCoverRate || editingCoverRateId !== null" class="px-6 py-4 bg-indigo-50 border-b border-gray-100">
+        <div v-if="showAddCoverStyleRate || editingCoverStyleRateId !== null" class="px-6 py-4 bg-indigo-50 border-b border-gray-100">
           <p class="text-xs font-semibold text-indigo-700 uppercase tracking-wide mb-3">
-            {{ editingCoverRateId !== null ? 'Edit Cover Rate' : 'Add Cover Rate' }}
+            {{ editingCoverStyleRateId !== null ? 'Edit Cover Style Rate' : 'Add Cover Style Rate' }}
           </p>
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label class="block text-xs text-gray-500 mb-1">Cover Style</label>
-              <select
-                v-model="coverRateForm.coverStyleId"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              >
-                <option :value="0" disabled>Select...</option>
+              <select v-model="coverStyleRateForm.coverStyleId" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <option value="" disabled>Select…</option>
                 <option v-for="cs in coverStyles" :key="cs.id" :value="cs.id">{{ cs.name }}</option>
               </select>
             </div>
             <div>
-              <label class="block text-xs text-gray-500 mb-1">Cover Finish</label>
-              <select
-                v-model="coverRateForm.coverFinishId"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              >
-                <option :value="0" disabled>Select...</option>
-                <option v-for="cf in coverFinishes" :key="cf.id" :value="cf.id">{{ cf.name }}</option>
-              </select>
-            </div>
-            <div>
               <label class="block text-xs text-gray-500 mb-1">Base Price ($)</label>
-              <input
-                v-model.number="coverRateForm.basePrice"
-                type="number"
-                min="0"
-                step="0.01"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
+              <input v-model.number="coverStyleRateForm.basePrice" type="number" min="0" step="0.01" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
             </div>
           </div>
           <div class="flex gap-2 mt-3">
-            <button
-              :disabled="coverRateSaving || coverRateForm.coverStyleId === '' || coverRateForm.coverFinishId === ''"
-              class="px-4 py-1.5 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-60"
-              @click="saveCoverRate"
-            >
-              {{ coverRateSaving ? 'Saving…' : 'Save' }}
+            <button :disabled="coverStyleRateSaving || !coverStyleRateForm.coverStyleId" class="px-4 py-1.5 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-60" @click="saveCoverStyleRate">
+              {{ coverStyleRateSaving ? 'Saving…' : 'Save' }}
             </button>
-            <button
-              class="px-4 py-1.5 text-sm font-medium text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-              @click="cancelCoverRate"
-            >
-              Cancel
-            </button>
+            <button class="px-4 py-1.5 text-sm font-medium text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors" @click="cancelCoverStyleRate">Cancel</button>
           </div>
         </div>
 
-        <!-- Loading -->
-        <div v-if="coverRatesLoading" class="flex justify-center py-12">
+        <div v-if="coverStyleRatesLoading" class="flex justify-center py-12">
           <svg class="animate-spin h-6 w-6 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
           </svg>
         </div>
-
         <div v-else class="overflow-x-auto">
-          <table class="w-full text-sm min-w-[560px]">
+          <table class="w-full text-sm min-w-[420px]">
             <thead>
               <tr class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-100">
-                <th class="px-6 py-3 w-16 hidden sm:table-cell">ID</th>
                 <th class="px-6 py-3">Cover Style</th>
-                <th class="px-6 py-3">Cover Finish</th>
                 <th class="px-6 py-3">Base Price</th>
                 <th class="px-6 py-3 w-40 text-right">Actions</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-50">
-              <tr v-if="coverRates.length === 0">
-                <td colspan="5" class="px-6 py-8 text-center text-sm text-gray-400">No cover rates yet.</td>
+              <tr v-if="coverStyleRates.length === 0">
+                <td colspan="3" class="px-6 py-8 text-center text-sm text-gray-400">No cover style rates yet.</td>
               </tr>
-              <tr v-for="rate in coverRates" :key="rate.id" class="hover:bg-gray-50 transition-colors">
-                <td class="px-6 py-3 text-gray-400 text-xs font-mono hidden sm:table-cell">{{ rate.id }}</td>
+              <tr v-for="rate in coverStyleRates" :key="rate.id" class="hover:bg-gray-50 transition-colors">
                 <td class="px-6 py-3 text-gray-800">{{ rate.coverStyle.name }}</td>
-                <td class="px-6 py-3 text-gray-800">{{ rate.coverFinish.name }}</td>
                 <td class="px-6 py-3 font-medium text-gray-900">{{ formatPrice(rate.basePrice) }}</td>
                 <td class="px-6 py-3 text-right">
                   <div class="flex items-center justify-end gap-2">
-                    <button
-                      class="px-3 py-1 text-xs font-medium text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors"
-                      @click="startEditCoverRate(rate)"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      class="px-3 py-1 text-xs font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
-                      @click="deleteCoverRate(rate.id)"
-                    >
-                      Delete
-                    </button>
+                    <button class="px-3 py-1 text-xs font-medium text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors" @click="startEditCoverStyleRate(rate)">Edit</button>
+                    <button class="px-3 py-1 text-xs font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors" @click="deleteCoverStyleRate(rate.id)">Delete</button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ======== COVER FINISH RATES ======== -->
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-100">
+        <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+          <div>
+            <h2 class="text-base font-semibold text-gray-900">Cover Finish Rates</h2>
+            <p class="text-xs text-gray-400 mt-0.5">Add-on per-copy cost by cover finish (Gloss, Matte, etc.)</p>
+          </div>
+          <button
+            class="px-4 py-1.5 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+            @click="startAddCoverFinishRate"
+          >Add</button>
+        </div>
+
+        <div v-if="coverFinishRatesError" class="mx-6 mt-4 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600">
+          {{ coverFinishRatesError }}
+        </div>
+
+        <div v-if="showAddCoverFinishRate || editingCoverFinishRateId !== null" class="px-6 py-4 bg-indigo-50 border-b border-gray-100">
+          <p class="text-xs font-semibold text-indigo-700 uppercase tracking-wide mb-3">
+            {{ editingCoverFinishRateId !== null ? 'Edit Cover Finish Rate' : 'Add Cover Finish Rate' }}
+          </p>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs text-gray-500 mb-1">Cover Finish</label>
+              <select v-model="coverFinishRateForm.coverFinishId" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <option value="" disabled>Select…</option>
+                <option v-for="cf in coverFinishes" :key="cf.id" :value="cf.id">{{ cf.name }}</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs text-gray-500 mb-1">Add-On Price ($)</label>
+              <input v-model.number="coverFinishRateForm.addOnPrice" type="number" min="0" step="0.01" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            </div>
+          </div>
+          <div class="flex gap-2 mt-3">
+            <button :disabled="coverFinishRateSaving || !coverFinishRateForm.coverFinishId" class="px-4 py-1.5 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-60" @click="saveCoverFinishRate">
+              {{ coverFinishRateSaving ? 'Saving…' : 'Save' }}
+            </button>
+            <button class="px-4 py-1.5 text-sm font-medium text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors" @click="cancelCoverFinishRate">Cancel</button>
+          </div>
+        </div>
+
+        <div v-if="coverFinishRatesLoading" class="flex justify-center py-12">
+          <svg class="animate-spin h-6 w-6 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+          </svg>
+        </div>
+        <div v-else class="overflow-x-auto">
+          <table class="w-full text-sm min-w-[420px]">
+            <thead>
+              <tr class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-100">
+                <th class="px-6 py-3">Cover Finish</th>
+                <th class="px-6 py-3">Add-On Price</th>
+                <th class="px-6 py-3 w-40 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-50">
+              <tr v-if="coverFinishRates.length === 0">
+                <td colspan="3" class="px-6 py-8 text-center text-sm text-gray-400">No cover finish rates yet.</td>
+              </tr>
+              <tr v-for="rate in coverFinishRates" :key="rate.id" class="hover:bg-gray-50 transition-colors">
+                <td class="px-6 py-3 text-gray-800">{{ rate.coverFinish.name }}</td>
+                <td class="px-6 py-3 font-medium text-gray-900">{{ formatPrice(rate.addOnPrice) }}</td>
+                <td class="px-6 py-3 text-right">
+                  <div class="flex items-center justify-end gap-2">
+                    <button class="px-3 py-1 text-xs font-medium text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors" @click="startEditCoverFinishRate(rate)">Edit</button>
+                    <button class="px-3 py-1 text-xs font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors" @click="deleteCoverFinishRate(rate.id)">Delete</button>
                   </div>
                 </td>
               </tr>
@@ -589,23 +596,20 @@ onMounted(async () => {
       <!-- ======== BINDING RATES ======== -->
       <div class="bg-white rounded-2xl shadow-sm border border-gray-100">
         <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h2 class="text-base font-semibold text-gray-900">Binding Rates</h2>
+          <div>
+            <h2 class="text-base font-semibold text-gray-900">Binding Rates</h2>
+            <p class="text-xs text-gray-400 mt-0.5">Per-copy surcharge by binding type</p>
+          </div>
           <button
             class="px-4 py-1.5 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
             @click="startAddBindingRate"
-          >
-            Add
-          </button>
+          >Add</button>
         </div>
 
-        <div
-          v-if="bindingRatesError"
-          class="mx-6 mt-4 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600"
-        >
+        <div v-if="bindingRatesError" class="mx-6 mt-4 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600">
           {{ bindingRatesError }}
         </div>
 
-        <!-- Add / edit form -->
         <div v-if="showAddBindingRate || editingBindingRateId !== null" class="px-6 py-4 bg-indigo-50 border-b border-gray-100">
           <p class="text-xs font-semibold text-indigo-700 uppercase tracking-wide mb-3">
             {{ editingBindingRateId !== null ? 'Edit Binding Rate' : 'Add Binding Rate' }}
@@ -613,55 +617,34 @@ onMounted(async () => {
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label class="block text-xs text-gray-500 mb-1">Binding Type</label>
-              <select
-                v-model="bindingRateForm.bindingTypeId"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              >
-                <option :value="0" disabled>Select...</option>
+              <select v-model="bindingRateForm.bindingTypeId" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <option value="" disabled>Select…</option>
                 <option v-for="bt in bindingTypes" :key="bt.id" :value="bt.id">{{ bt.name }}</option>
               </select>
             </div>
             <div>
               <label class="block text-xs text-gray-500 mb-1">Surcharge ($)</label>
-              <input
-                v-model.number="bindingRateForm.surcharge"
-                type="number"
-                min="0"
-                step="0.01"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
+              <input v-model.number="bindingRateForm.surcharge" type="number" min="0" step="0.01" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
             </div>
           </div>
           <div class="flex gap-2 mt-3">
-            <button
-              :disabled="bindingRateSaving || bindingRateForm.bindingTypeId === ''"
-              class="px-4 py-1.5 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-60"
-              @click="saveBindingRate"
-            >
+            <button :disabled="bindingRateSaving || !bindingRateForm.bindingTypeId" class="px-4 py-1.5 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-60" @click="saveBindingRate">
               {{ bindingRateSaving ? 'Saving…' : 'Save' }}
             </button>
-            <button
-              class="px-4 py-1.5 text-sm font-medium text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-              @click="cancelBindingRate"
-            >
-              Cancel
-            </button>
+            <button class="px-4 py-1.5 text-sm font-medium text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors" @click="cancelBindingRate">Cancel</button>
           </div>
         </div>
 
-        <!-- Loading -->
         <div v-if="bindingRatesLoading" class="flex justify-center py-12">
           <svg class="animate-spin h-6 w-6 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
           </svg>
         </div>
-
         <div v-else class="overflow-x-auto">
           <table class="w-full text-sm min-w-[420px]">
             <thead>
               <tr class="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-100">
-                <th class="px-6 py-3 w-16 hidden sm:table-cell">ID</th>
                 <th class="px-6 py-3">Binding Type</th>
                 <th class="px-6 py-3">Surcharge</th>
                 <th class="px-6 py-3 w-40 text-right">Actions</th>
@@ -669,26 +652,15 @@ onMounted(async () => {
             </thead>
             <tbody class="divide-y divide-gray-50">
               <tr v-if="bindingRates.length === 0">
-                <td colspan="4" class="px-6 py-8 text-center text-sm text-gray-400">No binding rates yet.</td>
+                <td colspan="3" class="px-6 py-8 text-center text-sm text-gray-400">No binding rates yet.</td>
               </tr>
               <tr v-for="rate in bindingRates" :key="rate.id" class="hover:bg-gray-50 transition-colors">
-                <td class="px-6 py-3 text-gray-400 text-xs font-mono hidden sm:table-cell">{{ rate.id }}</td>
                 <td class="px-6 py-3 text-gray-800">{{ rate.bindingType.name }}</td>
                 <td class="px-6 py-3 font-medium text-gray-900">{{ formatPrice(rate.surcharge) }}</td>
                 <td class="px-6 py-3 text-right">
                   <div class="flex items-center justify-end gap-2">
-                    <button
-                      class="px-3 py-1 text-xs font-medium text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors"
-                      @click="startEditBindingRate(rate)"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      class="px-3 py-1 text-xs font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
-                      @click="deleteBindingRate(rate.id)"
-                    >
-                      Delete
-                    </button>
+                    <button class="px-3 py-1 text-xs font-medium text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors" @click="startEditBindingRate(rate)">Edit</button>
+                    <button class="px-3 py-1 text-xs font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors" @click="deleteBindingRate(rate.id)">Delete</button>
                   </div>
                 </td>
               </tr>
