@@ -2,12 +2,21 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ProductStatus } from '../../common/enums/product-status.enum';
+import { BindingRate } from '../../entities/binding-rate.entity';
 import { BindingType } from '../../entities/binding-type.entity';
 import { CoverFinish } from '../../entities/cover-finish.entity';
+import { CoverRate } from '../../entities/cover-rate.entity';
 import { CoverStyle } from '../../entities/cover-style.entity';
+import { PageRate } from '../../entities/page-rate.entity';
 import { PaperStock } from '../../entities/paper-stock.entity';
 import { PrintType } from '../../entities/print-type.entity';
 import { TrimSize } from '../../entities/trim-size.entity';
+
+export interface RatesResponse {
+  pageRates: { printTypeId: string; paperStockId: string; ratePerPage: number }[];
+  coverRates: { coverStyleId: string; coverFinishId: string; basePrice: number }[];
+  bindingRates: { bindingTypeId: string; surcharge: number }[];
+}
 
 const ACTIVE = { status: ProductStatus.ACTIVE };
 
@@ -18,12 +27,15 @@ const ACTIVE = { status: ProductStatus.ACTIVE };
 @Injectable()
 export class ProductsService {
   constructor(
-    @InjectRepository(TrimSize) private trimSizeRepo: Repository<TrimSize>,
-    @InjectRepository(CoverStyle) private coverStyleRepo: Repository<CoverStyle>,
+    @InjectRepository(TrimSize)    private trimSizeRepo:    Repository<TrimSize>,
+    @InjectRepository(CoverStyle)  private coverStyleRepo:  Repository<CoverStyle>,
     @InjectRepository(CoverFinish) private coverFinishRepo: Repository<CoverFinish>,
-    @InjectRepository(PrintType) private printTypeRepo: Repository<PrintType>,
-    @InjectRepository(PaperStock) private paperStockRepo: Repository<PaperStock>,
+    @InjectRepository(PrintType)   private printTypeRepo:   Repository<PrintType>,
+    @InjectRepository(PaperStock)  private paperStockRepo:  Repository<PaperStock>,
     @InjectRepository(BindingType) private bindingTypeRepo: Repository<BindingType>,
+    @InjectRepository(PageRate)    private pageRateRepo:    Repository<PageRate>,
+    @InjectRepository(CoverRate)   private coverRateRepo:   Repository<CoverRate>,
+    @InjectRepository(BindingRate) private bindingRateRepo: Repository<BindingRate>,
   ) {}
 
   /** @returns Active trim sizes visible to customers */
@@ -54,5 +66,30 @@ export class ProductsService {
   /** @returns Active binding types visible to customers */
   getAllBindingTypes(): Promise<BindingType[]> {
     return this.bindingTypeRepo.find({ where: ACTIVE, order: { id: 'ASC' } });
+  }
+
+  /** @returns All rate tables for client-side partial price estimation */
+  async getAllRates(): Promise<RatesResponse> {
+    const [pageRates, coverRates, bindingRates] = await Promise.all([
+      this.pageRateRepo.find({ relations: ['printType', 'paperStock'] }),
+      this.coverRateRepo.find({ relations: ['coverStyle', 'coverFinish'] }),
+      this.bindingRateRepo.find({ relations: ['bindingType'] }),
+    ]);
+    return {
+      pageRates: pageRates.map((r) => ({
+        printTypeId: r.printType.id,
+        paperStockId: r.paperStock.id,
+        ratePerPage: Number(r.ratePerPage),
+      })),
+      coverRates: coverRates.map((r) => ({
+        coverStyleId: r.coverStyle.id,
+        coverFinishId: r.coverFinish.id,
+        basePrice: Number(r.basePrice),
+      })),
+      bindingRates: bindingRates.map((r) => ({
+        bindingTypeId: r.bindingType.id,
+        surcharge: Number(r.surcharge),
+      })),
+    };
   }
 }

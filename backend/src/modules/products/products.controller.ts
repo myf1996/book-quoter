@@ -5,7 +5,7 @@ import { CoverStyle } from '../../entities/cover-style.entity';
 import { PaperStock } from '../../entities/paper-stock.entity';
 import { PrintType } from '../../entities/print-type.entity';
 import { TrimSize } from '../../entities/trim-size.entity';
-import { ProductsService } from './products.service';
+import { ProductsService, RatesResponse } from './products.service';
 
 /**
  * Exposes product catalogue endpoints consumed by the quoter wizard.
@@ -49,5 +49,11 @@ export class ProductsController {
   @Get('binding-types')
   getBindingTypes(): Promise<BindingType[]> {
     return this.productsService.getAllBindingTypes();
+  }
+
+  /** GET /api/products/rates — all rate tables for client-side partial price estimation */
+  @Get('rates')
+  getRates(): Promise<RatesResponse> {
+    return this.productsService.getAllRates();
   }
 }
