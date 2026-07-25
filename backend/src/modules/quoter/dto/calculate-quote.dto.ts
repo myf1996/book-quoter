@@ -1,4 +1,4 @@
-import { IsNumber, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
+import { IsHexColor, IsNumber, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
 
 /** DTO for the calculate price endpoint — validates all wizard selections */
 export class CalculateQuoteDto {
@@ -33,4 +33,14 @@ export class CalculateQuoteDto {
   @IsOptional()
   @IsString()
   couponCode?: string;
+
+  /** Primary ink color hex (e.g. #000000). Required for both B&W and Color print types. */
+  @IsOptional()
+  @IsHexColor()
+  primaryColor?: string;
+
+  /** Secondary ink color hex (e.g. #FFFFFF). Required for both B&W and Color print types. */
+  @IsOptional()
+  @IsHexColor()
+  secondaryColor?: string;
 }

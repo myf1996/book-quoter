@@ -82,6 +82,8 @@ export interface QuoteDetailView {
     pageCount: number;
     quantity: number;
   };
+  primaryColor: string | null;
+  secondaryColor: string | null;
   priceBreakdown: Quote['priceBreakdown'];
   totalPrice: number;
   couponCode: string | null;
@@ -616,6 +618,8 @@ export class AdminService {
         pageCount: quote.pageCount,
         quantity: quote.quantity,
       },
+      primaryColor: quote.primaryColor,
+      secondaryColor: quote.secondaryColor,
       priceBreakdown: quote.priceBreakdown,
       totalPrice: Number(quote.totalPrice),
       couponCode: quote.couponCode,

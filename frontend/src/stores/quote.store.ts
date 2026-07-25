@@ -16,6 +16,10 @@ export interface QuoteState {
   bindingTypeId: string | null
   pageCount: number | null
   quantity: number | null
+  /** Primary ink color hex — auto-set for B&W, user-chosen for Color */
+  primaryColor: string | null
+  /** Secondary ink color hex — auto-set for B&W, user-chosen for Color */
+  secondaryColor: string | null
 }
 
 /** Tracks page count validity bounds when a trim size is selected */
@@ -23,6 +27,18 @@ export interface PageCountBounds {
   minPages: number
   maxPages: number
 }
+
+export type ProductionTime = 'standard' | 'expedited' | 'rush'
+
+export const STEP_LABELS = [
+  'Trim Size',
+  'Cover Style',
+  'Cover Finish',
+  'Print Type',
+  'Paper Stock',
+  'Binding',
+  'Quantity',
+] as const
 
 const TOTAL_STEPS = 7
 
@@ -51,6 +67,8 @@ export const useQuoteStore = defineStore('quote', () => {
     bindingTypeId: null,
     pageCount: null,
     quantity: null,
+    primaryColor: null,
+    secondaryColor: null,
   })
 
   /**
@@ -62,8 +80,22 @@ export const useQuoteStore = defineStore('quote', () => {
   /** Coupon applied by the user in the summary sidebar; null if none */
   const appliedCoupon = ref<AppliedCoupon | null>(null)
 
+  /** Production time selection — UI only, not persisted to DB */
+  const productionTime = ref<ProductionTime>('standard')
+
   function setAppliedCoupon(coupon: AppliedCoupon | null): void {
     appliedCoupon.value = coupon
+  }
+
+  function setProductionTime(time: ProductionTime): void {
+    productionTime.value = time
+  }
+
+  /** Navigate directly to any step number */
+  function goToStep(step: number): void {
+    if (step >= 1 && step <= TOTAL_STEPS) {
+      currentStep.value = step
+    }
   }
 
   /** Updates one or more fields in the quote state */
@@ -80,11 +112,18 @@ export const useQuoteStore = defineStore('quote', () => {
   /** Returns true if the current step has a valid selection */
   function isCurrentStepComplete(): boolean {
     if (currentStep.value === 1) {
-      // Step 1 requires both a trim size AND a valid page count
       if (quoteState.trimSizeId === null || quoteState.pageCount === null) return false
       return (
         quoteState.pageCount >= pageCountBounds.minPages &&
         quoteState.pageCount <= pageCountBounds.maxPages
+      )
+    }
+    if (currentStep.value === 4) {
+      // Print Type requires a selection AND both colors to be set
+      return (
+        quoteState.printTypeId !== null &&
+        quoteState.primaryColor !== null &&
+        quoteState.secondaryColor !== null
       )
     }
     const field = stepFieldMap[currentStep.value]
@@ -110,9 +149,12 @@ export const useQuoteStore = defineStore('quote', () => {
     quoteState,
     pageCountBounds,
     appliedCoupon,
+    productionTime,
     updateQuoteState,
     setPageCountBounds,
     setAppliedCoupon,
+    setProductionTime,
+    goToStep,
     isCurrentStepComplete,
     goToNextStep,
     goToPreviousStep,

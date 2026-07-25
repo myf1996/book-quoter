@@ -71,8 +71,8 @@ async function seed(): Promise<void> {
   ], ['name']);
 
   await dataSource.getRepository(PrintType).upsert([
-    { name: 'Black & White', status: ACTIVE },
-    { name: 'Color',         status: ACTIVE },
+    { name: 'Black & White', primaryColor: '#000000', secondaryColor: '#FFFFFF', status: ACTIVE },
+    { name: 'Color', primaryColor: null, secondaryColor: null, status: ACTIVE },
   ], ['name']);
 
   await dataSource.getRepository(PaperStock).upsert([

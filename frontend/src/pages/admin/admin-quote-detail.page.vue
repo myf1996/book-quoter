@@ -27,6 +27,8 @@ interface QuoteDetail {
     pageCount: number
     quantity: number
   }
+  primaryColor: string | null
+  secondaryColor: string | null
   priceBreakdown: PriceBreakdown
   totalPrice: number
   couponCode: string | null
@@ -143,7 +145,26 @@ onMounted(async () => {
                 class="flex items-center justify-between px-6 py-3"
               >
                 <span class="text-sm text-gray-500">{{ row.label }}</span>
-                <span class="text-sm font-medium text-gray-900">{{ quote.configuration[row.key] }}</span>
+                <div class="flex items-center gap-2">
+                  <!-- Color swatches for Print Type -->
+                  <template v-if="row.key === 'printType' && (quote.primaryColor || quote.secondaryColor)">
+                    <div class="flex items-center gap-1">
+                      <div
+                        v-if="quote.primaryColor"
+                        class="w-4 h-4 rounded-full border border-gray-300 shadow-sm"
+                        :style="{ background: quote.primaryColor }"
+                        :title="`Primary: ${quote.primaryColor}`"
+                      />
+                      <div
+                        v-if="quote.secondaryColor"
+                        class="w-4 h-4 rounded-full border border-gray-300 shadow-sm"
+                        :style="{ background: quote.secondaryColor }"
+                        :title="`Secondary: ${quote.secondaryColor}`"
+                      />
+                    </div>
+                  </template>
+                  <span class="text-sm font-medium text-gray-900">{{ quote.configuration[row.key] }}</span>
+                </div>
               </div>
               <div class="flex items-center justify-between px-6 py-3">
                 <span class="text-sm text-gray-500">Pages</span>

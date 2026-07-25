@@ -66,7 +66,11 @@ async function saveQuote(): Promise<void> {
   isSavingQuote.value = true
   saveError.value = null
   try {
-    const body: Record<string, unknown> = { ...quoteStore.quoteState }
+    const body: Record<string, unknown> = {
+      ...quoteStore.quoteState,
+      primaryColor: quoteStore.quoteState.primaryColor,
+      secondaryColor: quoteStore.quoteState.secondaryColor,
+    }
     if (quoteStore.appliedCoupon) {
       body.couponCode = quoteStore.appliedCoupon.code
     }

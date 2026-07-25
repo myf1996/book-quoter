@@ -175,6 +175,8 @@ export class QuoterService {
       priceBreakdown: breakdown,
       couponCode,
       discountAmount,
+      primaryColor: dto.primaryColor ?? null,
+      secondaryColor: dto.secondaryColor ?? null,
       user: { id: userId } as User,
     });
 

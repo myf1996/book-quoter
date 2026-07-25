@@ -61,4 +61,12 @@ export class Quote extends BaseAppEntity {
   /** Discount amount deducted from the base total; null if no coupon was used */
   @Column('decimal', { precision: 10, scale: 2, nullable: true })
   discountAmount: number | null;
+
+  /** Primary ink color hex chosen for this quote (e.g. #000000). Inherited from printType default or user-selected. */
+  @Column({ type: 'varchar', length: 7, nullable: true, default: null })
+  primaryColor: string | null;
+
+  /** Secondary ink color hex chosen for this quote (e.g. #FFFFFF). Inherited from printType default or user-selected. */
+  @Column({ type: 'varchar', length: 7, nullable: true, default: null })
+  secondaryColor: string | null;
 }
