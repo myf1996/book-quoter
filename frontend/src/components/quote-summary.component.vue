@@ -159,7 +159,7 @@ function formatPrice(value: number): string {
 </script>
 
 <template>
-  <div class="bg-gray-50 rounded-xl p-4 border border-gray-200">
+  <div class="bg-gray-50 rounded-xl p-4 border border-gray-200 overflow-visible">
     <h3 class="text-base font-semibold text-gray-900 mb-3">Quote Summary</h3>
 
     <!-- Selections — each row navigates to its step on click -->
@@ -189,41 +189,42 @@ function formatPrice(value: number): string {
           <span class="font-medium text-gray-900 group-hover:text-indigo-700 transition-colors whitespace-nowrap">
             {{ labels[row.map][quoteStore.quoteState[row.key]!] }}
           </span>
-          <!-- Trim size rate badge -->
+          <!-- Trim Size multiplier badge -->
           <span
-            v-if="row.key === 'trimSizeId' && quoteStore.quoteState.trimSizeId"
+            v-if="row.key === 'trimSizeId'"
             class="text-xs font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0 whitespace-nowrap"
             :class="trimMultiplier === 1 ? 'text-gray-500 bg-gray-100' : trimMultiplier < 1 ? 'text-green-700 bg-green-100' : 'text-amber-700 bg-amber-100'"
-          >
-            <template v-if="trimMultiplier === 1">std</template>
-            <template v-else-if="trimMultiplier < 1">−{{ Math.round((1 - trimMultiplier) * 100) }}%</template>
-            <template v-else>+{{ Math.round((trimMultiplier - 1) * 100) }}%</template>
-          </span>
+          >×{{ trimMultiplier }}</span>
           <!-- Cover Style price badge -->
           <span
             v-else-if="row.key === 'coverStyleId' && coverStylePrice !== null"
             class="text-xs font-medium text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded-full flex-shrink-0 whitespace-nowrap"
-          >{{ formatPrice(coverStylePrice) }}</span>
+          >{{ formatPrice(coverStylePrice!) }}</span>
           <!-- Cover Finish add-on badge -->
           <span
             v-else-if="row.key === 'coverFinishId' && coverFinishPrice !== null"
             class="text-xs font-medium text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded-full flex-shrink-0 whitespace-nowrap"
-          >+{{ formatPrice(coverFinishPrice) }}</span>
-          <!-- Print Type $/page badge -->
-          <span
-            v-else-if="row.key === 'printTypeId' && pageRatePerPage !== null"
-            class="text-xs font-medium text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded-full flex-shrink-0 whitespace-nowrap"
-          >${{ pageRatePerPage.toFixed(4) }}/pg</span>
-          <!-- Paper Stock cost-per-copy badge -->
+          >+{{ formatPrice(coverFinishPrice!) }}</span>
+          <!-- Print Type: size multiplier + effective $/page -->
+          <template v-else-if="row.key === 'printTypeId' && pageRatePerPage !== null">
+            <span
+              class="text-xs font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0 whitespace-nowrap"
+              :class="trimMultiplier === 1 ? 'text-gray-500 bg-gray-100' : trimMultiplier < 1 ? 'text-green-700 bg-green-100' : 'text-amber-700 bg-amber-100'"
+            >×{{ trimMultiplier }}</span>
+            <span class="text-xs font-medium text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded-full flex-shrink-0 whitespace-nowrap">
+              ${{ pageRatePerPage!.toFixed(4) }}/pg
+            </span>
+          </template>
+          <!-- Paper Stock: total interior cost per copy -->
           <span
             v-else-if="row.key === 'paperStockId' && pageRatePerCopy !== null"
             class="text-xs font-medium text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded-full flex-shrink-0 whitespace-nowrap"
-          >{{ formatPrice(pageRatePerCopy) }}/copy</span>
+          >{{ formatPrice(pageRatePerCopy!) }}/copy</span>
           <!-- Binding surcharge badge -->
           <span
             v-else-if="row.key === 'bindingTypeId' && bindingSurcharge !== null"
             class="text-xs font-medium text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded-full flex-shrink-0 whitespace-nowrap"
-          >{{ formatPrice(bindingSurcharge) }}/copy</span>
+          >{{ formatPrice(bindingSurcharge!) }}/copy</span>
         </div>
         <span v-else class="text-gray-300 italic whitespace-nowrap">Not selected</span>
       </button>

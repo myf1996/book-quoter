@@ -2,13 +2,34 @@
 /**
  * QuantityStep — Step 7: user selects print run quantity and production time
  */
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useQuoteStore } from '@/stores/quote.store'
 import type { ProductionTime } from '@/stores/quote.store'
 
 const quoteStore = useQuoteStore()
 
 const quantityOptions: number[] = [25, 50, 100, 250, 500, 1000]
+
+const customQty = ref('')
+
+function selectPreset(qty: number): void {
+  customQty.value = ''
+  quoteStore.updateQuoteState({ quantity: qty })
+}
+
+function onCustomQtyInput(event: Event): void {
+  const raw = (event.target as HTMLInputElement).value
+  customQty.value = raw
+  if (!raw) return
+  const parsed = parseInt(raw, 10)
+  if (!isNaN(parsed) && parsed >= 1) {
+    quoteStore.updateQuoteState({ quantity: parsed })
+  }
+}
+
+function isPresetActive(qty: number): boolean {
+  return quoteStore.quoteState.quantity === qty && customQty.value === ''
+}
 
 interface ProductionOption {
   value: ProductionTime
@@ -53,20 +74,44 @@ const productionDays = computed((): number =>
     <h2 class="text-xl font-semibold text-gray-900 mb-1">Select Quantity</h2>
     <p class="text-sm text-gray-500 mb-6">How many copies do you need?</p>
 
-    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-8">
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
       <button
         v-for="qty in quantityOptions"
         :key="qty"
         class="p-4 border-2 rounded-xl text-center font-semibold transition-all"
-        :class="quoteStore.quoteState.quantity === qty
+        :class="isPresetActive(qty)
           ? 'border-indigo-600 bg-indigo-50 text-indigo-700'
           : 'border-gray-200 text-gray-800 hover:border-indigo-300 bg-white'"
-        @click="quoteStore.updateQuoteState({ quantity: qty })"
+        @click="selectPreset(qty)"
       >
         <span class="block text-lg">{{ qty.toLocaleString() }}</span>
         <span class="text-xs font-normal text-gray-400 mt-0.5 block">copies</span>
       </button>
     </div>
+
+    <!-- Custom quantity -->
+    <div class="mt-4">
+      <label class="block text-sm font-medium text-gray-700 mb-1.5" for="custom-qty">
+        Or enter a custom quantity
+      </label>
+      <div class="flex items-center gap-2">
+        <input
+          id="custom-qty"
+          type="number"
+          min="1"
+          placeholder="e.g. 175"
+          :value="customQty"
+          class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 transition-all"
+          :class="customQty && quoteStore.quoteState.quantity && !quantityOptions.includes(quoteStore.quoteState.quantity)
+            ? 'border-indigo-500 ring-2 ring-indigo-200'
+            : 'border-gray-300 focus:ring-indigo-300'"
+          @input="onCustomQtyInput"
+        />
+        <span class="text-sm text-gray-500 whitespace-nowrap">copies</span>
+      </div>
+    </div>
+
+    <div class="mb-8" />
 
     <!-- Production Time -->
     <div class="border-t border-gray-100 pt-6">

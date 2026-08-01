@@ -120,6 +120,13 @@ const modalDescription = computed((): string => {
   const max = o.maxPages != null ? o.maxPages : 840
   return `${w}" × ${h}" — Min ${min}, Max ${max} pages`
 })
+
+const modalPricingMultiplier = computed((): number => {
+  const raw = modalOption.value?.pricingMultiplier
+  if (typeof raw === 'number') return raw
+  if (typeof raw === 'string') return parseFloat(raw)
+  return 1
+})
 </script>
 
 <template>
@@ -226,6 +233,36 @@ const modalDescription = computed((): string => {
           </p>
         </div>
         <div v-else class="w-20 h-28 bg-indigo-100 border-2 border-indigo-300 rounded"/>
+      </template>
+
+      <template v-if="modalOption" #extra>
+        <div class="grid grid-cols-2 gap-2 text-center">
+          <div class="bg-gray-50 rounded-lg p-2.5">
+            <p class="text-xs text-gray-400 mb-0.5">Width</p>
+            <p class="text-sm font-semibold text-gray-900">{{ modalOption.width }}"</p>
+          </div>
+          <div class="bg-gray-50 rounded-lg p-2.5">
+            <p class="text-xs text-gray-400 mb-0.5">Height</p>
+            <p class="text-sm font-semibold text-gray-900">{{ modalOption.height }}"</p>
+          </div>
+          <div class="bg-gray-50 rounded-lg p-2.5">
+            <p class="text-xs text-gray-400 mb-0.5">Min pages</p>
+            <p class="text-sm font-semibold text-gray-900">{{ modalOption.minPages ?? 24 }}</p>
+          </div>
+          <div class="bg-gray-50 rounded-lg p-2.5">
+            <p class="text-xs text-gray-400 mb-0.5">Max pages</p>
+            <p class="text-sm font-semibold text-gray-900">{{ modalOption.maxPages ?? 840 }}</p>
+          </div>
+          <div class="col-span-2 rounded-lg p-2.5"
+            :class="modalPricingMultiplier === 1 ? 'bg-gray-50' : modalPricingMultiplier < 1 ? 'bg-green-50' : 'bg-amber-50'"
+          >
+            <p class="text-xs text-gray-400 mb-0.5">Pricing multiplier</p>
+            <p class="text-sm font-semibold"
+              :class="modalPricingMultiplier === 1 ? 'text-gray-700' : modalPricingMultiplier < 1 ? 'text-green-700' : 'text-amber-700'"
+            >{{ modalPricingMultiplier }}×</p>
+            <p class="text-xs text-gray-400 mt-0.5">Multiplied against your print type's per-page rate (steps 4 &amp; 5)</p>
+          </div>
+        </div>
       </template>
     </OptionInfoModal>
   </div>
