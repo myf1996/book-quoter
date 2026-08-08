@@ -14,9 +14,7 @@ services:
       - key: DATABASE_URL
         value: postgresql://book_quoter_db_user:rBcGvWFd8xjiWiY5s1dkV7J8C8IUWFvE@dpg-d9rl98vavr4c739ivlcg-a/book_quoter_db
       - key: JWT_SECRET
-        value: f39fbdf1ade6182d1e033a01a697ee4cee51dfc8ac0c229754c62a795bd2897c
-      - key: ADMIN_JWT_SECRET
-        value: 7780ed92a2656a2319905328a7745f44cf3bdaa7f03f7ca086d9da242e866656
+        value: change-this-to-a-strong-random-secret-before-deploying
       - key: FRONTEND_URL
         value: https://book-quoter.vercel.app
       - key: LOG_LEVEL
