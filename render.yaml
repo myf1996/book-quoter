@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: book-quoter
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install --include=dev && npm run build
+    startCommand: node dist/main
+    healthCheckPath: /api/products/trim-sizes
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DATABASE_URL
+        value: postgresql://book_quoter_db_user:rBcGvWFd8xjiWiY5s1dkV7J8C8IUWFvE@dpg-d9rl98vavr4c739ivlcg-a/book_quoter_db
+      - key: JWT_SECRET
+        value: f39fbdf1ade6182d1e033a01a697ee4cee51dfc8ac0c229754c62a795bd2897c
+      - key: ADMIN_JWT_SECRET
+        value: 7780ed92a2656a2319905328a7745f44cf3bdaa7f03f7ca086d9da242e866656
+      - key: FRONTEND_URL
+        value: https://book-quoter.vercel.app
+      - key: LOG_LEVEL
+        value: warn
+      - key: DB_SYNCHRONIZE
+        value: true
+      - key: EMAIL_CONFIGURED
+        value: false
+
+databases:
+  - name: book-quoter-db
+    databaseName: book_quoter_db
+    plan: free
